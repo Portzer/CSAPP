@@ -5,6 +5,8 @@
 #include "instruction.h"
 #include "../cpu/mmu.h"
 #include "../cpu/register.h"
+#include "../memory/dram.h"
+
 #include <stdio.h>
 
 
@@ -49,6 +51,7 @@ void instruction_cycle(){
 
 void init_handler_table (){
     handle_table[mov_reg_reg] = &mov_reg_reg_handler;
+    handle_table[call] = &call_handler;
     handle_table[add_reg_reg] = &add_reg_reg_handler;
 };
 
@@ -61,5 +64,12 @@ void add_reg_reg_handler(uint64_t src, uint64_t dest){
 void mov_reg_reg_handler(uint64_t src, uint64_t dest){
     *(uint64_t *) dest = *(uint64_t *) src;
     reg.rip = reg.rip + sizeof(inst_t);
+
+}
+
+void call_handler(uint64_t src, uint64_t dest){
+    reg.rsp = reg.rsp - 8;
+    write64bits_dram(va2pa(reg.rsp), reg.rip + sizeof(inst_t));
+    reg.rip = src;
 
 }

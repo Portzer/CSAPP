@@ -60,6 +60,8 @@ void add_reg_reg_handler(uint64_t stc, uint64_t dest);
 
 void mov_reg_reg_handler(uint64_t src, uint64_t dest);
 
+void call_handler(uint64_t src, uint64_t dest);
+
 #endif
 
 
