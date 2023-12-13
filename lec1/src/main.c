@@ -105,7 +105,7 @@ end rsp (address) ~ (address + 10)
     print_register();
     print_stack();
 
-    for (int i = 0; i < 3; ++i){
+    for (int i = 0; i < 7; ++i){
         instruction_cycle();
         print_register();
         print_stack();

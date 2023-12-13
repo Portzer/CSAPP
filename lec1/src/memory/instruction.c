@@ -36,7 +36,7 @@ static uint64_t decode_od(od_t od){
         }else if (od.type == MM_IMM_REG1_REG2_S) {
             vaddr = od.imm + *(od.reg1) + (*(od.reg2)) * od.scal;
         }
-        return va2pa(vaddr);
+        return vaddr;
     }
 }
 void instruction_cycle(){
@@ -51,6 +51,9 @@ void instruction_cycle(){
 
 void init_handler_table (){
     handle_table[mov_reg_reg] = &mov_reg_reg_handler;
+    handle_table[mov_reg_mem] = &mov_reg_mem_handler;
+    handle_table[push_reg] = &push_handler;
+    handle_table[pop_reg] = &pop_handler;
     handle_table[call] = &call_handler;
     handle_table[add_reg_reg] = &add_reg_reg_handler;
 };
@@ -67,9 +70,24 @@ void mov_reg_reg_handler(uint64_t src, uint64_t dest){
 
 }
 
+void mov_reg_mem_handler(uint64_t src, uint64_t dest){
+    write64bits_dram(va2pa(dest), *(uint64_t *) src);
+    reg.rip = reg.rip + sizeof(inst_t);
+}
+
+
 void call_handler(uint64_t src, uint64_t dest){
     reg.rsp = reg.rsp - 8;
     write64bits_dram(va2pa(reg.rsp), reg.rip + sizeof(inst_t));
     reg.rip = src;
 
+}
+void pop_handler(uint64_t src, uint64_t dest){
+
+}
+
+void push_handler(uint64_t src, uint64_t dest){
+    reg.rsp = reg.rsp - 0x8;
+    write64bits_dram(va2pa(reg.rsp), *(uint64_t *) src);
+    reg.rip = reg.rip + sizeof(inst_t);
 }
