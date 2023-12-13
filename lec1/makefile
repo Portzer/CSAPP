@@ -11,6 +11,5 @@ CODE = ./src/memory/instruction.c  ./src/memory/dram.c ./src/disk/code.c ./src/c
 
 main:
 	$(CC) $(CFLAGS) -I$(SRC) $(CODE) -o $(EXE)
-
-run:
 	./$(EXE)
+

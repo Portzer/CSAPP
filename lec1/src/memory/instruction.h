@@ -67,6 +67,10 @@ void pop_handler(uint64_t src, uint64_t dest);
 void push_handler(uint64_t src, uint64_t dest);
 
 void mov_reg_mem_handler(uint64_t src, uint64_t dest);
+
+void mov_mem_reg_handler(uint64_t src, uint64_t dest);
+
+void ret_handler(uint64_t src, uint64_t dest);
 #endif
 
 

@@ -31,13 +31,13 @@ inst_t program[15]={
      " \%rsi,-0x20(\%rbp)"
      },
 
-    {mov_reg_mem,
+    {mov_mem_reg,
      {MM_IMM_REG,-0x18,0,(uint64_t *)&reg.rbp,NULL},
      {REG,0,0,(uint64_t *)&reg.rdx,NULL},
      "mov    -0x18(\%rbp),\%rdx"
      },
 
-    {mov_reg_mem,
+    {mov_mem_reg,
      {MM_IMM_REG,-0x20,0,(uint64_t *)&reg.rbp,NULL},
      {REG,0,0,(uint64_t *)&reg.rax,NULL},
      "mov    -0x20(\%rbp),\%rax"
@@ -55,7 +55,7 @@ inst_t program[15]={
     "mov    \%rax,-0x8(\%rbp)"
     },
 
-    {mov_reg_mem,
+    {mov_mem_reg,
      {MM_IMM_REG,-0x8,0,(uint64_t *)&reg.rbp,NULL},
      {REG,0,0,(uint64_t *)&reg.rax,NULL},
      "mov    -0x8(\%rbp),\%rax"
@@ -77,8 +77,8 @@ inst_t program[15]={
  ////////////////////////////////////////////////////////////////
 
     {mov_reg_reg,
-     {REG,0,0,(uint64_t *)&reg.rdx,NULL},
-     {REG,0,0,(uint64_t *)&reg.rsi,NULL},
+     {REG,0,0,&reg.rdx,NULL},
+     {REG,0,0,&reg.rsi,NULL},
      "mov    \%rdx,\%rsi"
      },
 

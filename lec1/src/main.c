@@ -76,7 +76,7 @@ end rsp (address) ~ (address + 10)
 
     init_handler_table();
     //init register info
-    reg.rax = 0xabcd;
+    reg.rax = 0x12340000;
     reg.rbx = 0x555555555190;
     reg.rcx = 0x555555555190;
     reg.rdx = 0xabcd;
@@ -105,19 +105,19 @@ end rsp (address) ~ (address + 10)
     print_register();
     print_stack();
 
-    for (int i = 0; i < 7; ++i){
+    for (int i = 0; i < 15; ++i){
         instruction_cycle();
         print_register();
         print_stack();
     }
     //验证
     int match = 1;
-    match = match && (reg.rax == 0xabcd);
+    match = match && (reg.rax == 0x1234abcd);
     match = match && (reg.rbx == 0x555555555190);
     match = match && (reg.rcx == 0x555555555190);
-    match = match && (reg.rdx == 0x1234);
-    match = match && (reg.rsi == 0xabcd0000);
-    match = match && (reg.rdi == 0x1234);
+    match = match && (reg.rdx == 0x12340000);
+    match = match && (reg.rsi == 0xabcd);
+    match = match && (reg.rdi == 0x12340000);
     match = match && (reg.rbp == 0x7fffffffe100);
     match = match && (reg.rsp == 0x7fffffffe0e0);
     if (match == 1) {
