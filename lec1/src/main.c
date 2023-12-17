@@ -1,146 +1,118 @@
-#include <stdio.h>
-#include <stdint.h>
-#include "cpu/register.h"
-#include "cpu/mmu.h"
-#include "memory/instruction.h"
-#include "disk/elf.h"
-#include "memory/dram.h"
+#include<stdio.h>
+#include<string.h>
+#include<header/cpu.h>
+#include "header/memory.h"
+#include<header/common.h>
 
-int main(){
-    /**
-     * x.c asm
-start register
-rax            0x1234              4660
-rbx            0x555555555190      93824992235920
-rcx            0x555555555190      93824992235920
-rdx            0xabcd0000          2882338816
-rsi            0x7fffffffe1f8      140737488347640
-rdi            0x1                 1
-rbp            0x7fffffffe100      0x7fffffffe100
-rsp            0x7fffffffe0e0      0x7fffffffe0e0
-r8             0x0                 0
-r9             0x7ffff7fe0d60      140737354009952
-r10            0x7ffff7ffcf68      140737354125160
-r11            0x206               518
-r12            0x555555555040      93824992235584
-r13            0x7fffffffe1f0      140737488347632
-r14            0x0                 0
-r15            0x0                 0
-rip            0x555555555173      0x555555555173 <main+37>
-eflags         0x202               [ IF ]
-cs             0x33                51
-ss             0x2b                43
-ds             0x0                 0
-es             0x0                 0
-fs             0x0                 0
-gs             0x0                 0
+#define MAX_NUM_INSTRUCTION_CYCLE 100
 
+static void TestAddFunctionCallAndComputation();
 
-end register
-rax            0xabcd1234          2882343476
-rbx            0x555555555190      93824992235920
-rcx            0x555555555190      93824992235920
-rdx            0x1234              4660
-rsi            0xabcd0000          2882338816
-rdi            0x1234              4660
-rbp            0x7fffffffe100      0x7fffffffe100
-rsp            0x7fffffffe0e0      0x7fffffffe0e0
-r8             0x0                 0
-r9             0x7ffff7fe0d60      140737354009952
-r10            0x7ffff7ffcf68      140737354125160
-r11            0x206               518
-r12            0x555555555040      93824992235584
-r13            0x7fffffffe1f0      140737488347632
-r14            0x0                 0
-r15            0x0                 0
-rip            0x555555555182      0x555555555182 <main+52>
-eflags         0x202               [ IF ]
-cs             0x33                51
-ss             0x2b                43
-ds             0x0                 0
-es             0x0                 0
-fs             0x0                 0
-gs             0x0                 0
+// symbols from isa and sram
+void print_register(core_t *cr);
+void print_stack(core_t *cr);
 
-
-
-start rsp (address) ~ (address + 10)
-0x7fffffffe0e0: 0x00000000      0x00000000      0x00001234      0x00000000
-0x7fffffffe0f0: 0xabcd0000      0x00000000      0x00000000      0x00000000
-0x7fffffffe100: 0x00000000      0x00000000
-end rsp (address) ~ (address + 10)
-0x7fffffffe0e0: 0x00000000      0x00000000      0x00001234      0x00000000
-0x7fffffffe0f0: 0xabcd0000      0x00000000      0xabcd1234      0x00000000
-0x7fffffffe100: 0x00000000      0x00000000
-**/
-
-    init_handler_table();
-    //init register info
-    reg.rax = 0x12340000;
-    reg.rbx = 0x555555555190;
-    reg.rcx = 0x555555555190;
-    reg.rdx = 0xabcd;
-    reg.rsi = 0x7fffffffe1f8;
-    reg.rdi = 0x1;
-    reg.rbp = 0x7fffffffe100;
-    reg.rsp = 0x7fffffffe0e0;
-    reg.rip = (uint64_t)&program[11];
-
-    //memory address info
-    //rbp:函数的结束 rsp:函数的开始
-    //        低地址:低地址/高地址 高地址:低地址/高地址
-    //0x7fffffffe0f0: 0xabcd0000      0x00000000
-//    mm[va2pa(0x7fffffffe100)] = 0x00000000;
-//    mm[va2pa(0x7fffffffe0f8)] = 0x0;
-//    mm[va2pa(0x7fffffffe0f0)] = 0xabcd;
-//    mm[va2pa(0x7fffffffe0e8)] = 0x12340000;
-//    mm[va2pa(0x7fffffffe0e0)] = 0x00000000 ;
-
-    write64bits_dram(va2pa(0x7fffffffe100), 0x00000000);
-    write64bits_dram(va2pa(0x7fffffffe0f8), 0x0);
-    write64bits_dram(va2pa(0x7fffffffe0f0), 0xabcd);
-    write64bits_dram(va2pa(0x7fffffffe0e8), 0x12340000);
-    write64bits_dram(va2pa(0x7fffffffe0e0), 0x00000000);
-
-    print_register();
-    print_stack();
-
-    for (int i = 0; i < 15; ++i){
-        instruction_cycle();
-        print_register();
-        print_stack();
-    }
-    //验证
-    int match = 1;
-    match = match && (reg.rax == 0x1234abcd);
-    match = match && (reg.rbx == 0x555555555190);
-    match = match && (reg.rcx == 0x555555555190);
-    match = match && (reg.rdx == 0x12340000);
-    match = match && (reg.rsi == 0xabcd);
-    match = match && (reg.rdi == 0x12340000);
-    match = match && (reg.rbp == 0x7fffffffe100);
-    match = match && (reg.rsp == 0x7fffffffe0e0);
-    if (match == 1) {
-        printf("reg match\n");
-    } else {
-        printf("reg no match\n");
-    }
-    read64bits_dram(va2pa(0x7fffffffe100));
-    read64bits_dram(va2pa(0x7fffffffe0f8));
-    read64bits_dram(va2pa(0x7fffffffe0f0));
-    read64bits_dram(va2pa(0x7fffffffe0e8));
-    read64bits_dram(va2pa(0x7fffffffe0e0));
-
-    match = match && (read64bits_dram(va2pa(0x7fffffffe100)) == 0x00000000);
-    match = match && (read64bits_dram(va2pa(0x7fffffffe0f8)) == 0x1234abcd);
-    match = match && (read64bits_dram(va2pa(0x7fffffffe0f0)) ==  0xabcd);
-    match = match && (read64bits_dram(va2pa(0x7fffffffe0e8)) ==  0x12340000);
-    match = match && (read64bits_dram(va2pa(0x7fffffffe0e0)) == 0x00000000);
-    if (match == 1) {
-        printf("mem match\n");
-    } else {
-        printf("mem no match\n");
-    }
+int main()
+{
+    TestAddFunctionCallAndComputation();
     return 0;
 }
 
+static void TestAddFunctionCallAndComputation()
+{
+    ACTIVE_CORE = 0x0;
+
+    core_t *ac = (core_t *)&CORES[ACTIVE_CORE];
+
+    // init state
+    ac->reg.rax = 0xabcd;
+    ac->reg.rbx = 0x8000670;
+    ac->reg.rcx = 0x8000670;
+    ac->reg.rdx = 0x12340000;
+    ac->reg.rsi = 0x7ffffffee208;
+    ac->reg.rdi = 0x1;
+    ac->reg.rbp = 0x7ffffffee110;
+    ac->reg.rsp = 0x7ffffffee0f0;
+
+    ac->CF = 0;
+    ac->ZF = 0;
+    ac->SF = 0;
+    ac->OF = 0;
+
+    write64bits_dram(va2pa(0x7ffffffee110, ac), 0x0000000000000000, ac);    // rbp
+    write64bits_dram(va2pa(0x7ffffffee108, ac), 0x0000000000000000, ac);
+    write64bits_dram(va2pa(0x7ffffffee100, ac), 0x0000000012340000, ac);
+    write64bits_dram(va2pa(0x7ffffffee0f8, ac), 0x000000000000abcd, ac);
+    write64bits_dram(va2pa(0x7ffffffee0f0, ac), 0x0000000000000000, ac);    // rsp
+
+    // 2 before call
+    // 3 after call before push
+    // 5 after rbp
+    // 13 before pop
+    // 14 after pop before ret
+    // 15 after ret
+    char assembly[15][MAX_INSTRUCTION_CHAR] = {
+            "push   %rbp",              // 0
+            "mov    %rsp,%rbp",         // 1
+            "mov    %rdi,-0x18(%rbp)",  // 2
+            "mov    %rsi,-0x20(%rbp)",  // 3
+            "mov    -0x18(%rbp),%rdx",  // 4
+            "mov    -0x20(%rbp),%rax",  // 5
+            "add    %rdx,%rax",         // 6
+            "mov    %rax,-0x8(%rbp)",   // 7
+            "mov    -0x8(%rbp),%rax",   // 8
+            "pop    %rbp",              // 9
+            "retq",                     // 10
+            "mov    %rdx,%rsi",         // 11
+            "mov    %rax,%rdi",         // 12
+            "callq  0",                 // 13
+            "mov    %rax,-0x8(%rbp)",   // 14
+    };
+    ac->rip = (uint64_t)&assembly[11];
+    sprintf(assembly[13], "callq  $%p", &assembly[0]);
+
+    printf("begin\n");
+    int time = 0;
+    while (time < 15)
+    {
+        instruction_cycle(ac);
+        print_register(ac);
+        print_stack(ac);
+        time ++;
+    }
+
+    // gdb state ret from func
+    int match = 1;
+    match = match && ac->reg.rax == 0x1234abcd;
+    match = match && ac->reg.rbx == 0x8000670;
+    match = match && ac->reg.rcx == 0x8000670;
+    match = match && ac->reg.rdx == 0xabcd;
+    match = match && ac->reg.rsi == 0x12340000;
+    match = match && ac->reg.rdi == 0xabcd;
+    match = match && ac->reg.rbp == 0x7ffffffee110;
+    match = match && ac->reg.rsp == 0x7ffffffee0f0;
+
+    if (match)
+    {
+        printf("register match\n");
+    }
+    else
+    {
+        printf("register mismatch\n");
+    }
+
+    match = match && (read64bits_dram(va2pa(0x7ffffffee110, ac), ac) == 0x0000000000000000); // rbp
+    match = match && (read64bits_dram(va2pa(0x7ffffffee108, ac), ac) == 0x000000001234abcd);
+    match = match && (read64bits_dram(va2pa(0x7ffffffee100, ac), ac) == 0x0000000012340000);
+    match = match && (read64bits_dram(va2pa(0x7ffffffee0f8, ac), ac) == 0x000000000000abcd);
+    match = match && (read64bits_dram(va2pa(0x7ffffffee0f0, ac), ac) == 0x0000000000000000); // rsp
+
+    if (match)
+    {
+        printf("memory match\n");
+    }
+    else
+    {
+        printf("memory mismatch\n");
+    }
+}

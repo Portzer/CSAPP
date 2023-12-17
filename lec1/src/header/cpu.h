@@ -1,9 +1,9 @@
 //
-// Created by M on 2023/12/7.
+// Created by M on 2023/12/16.
 //
 
-#ifndef LEC1_REGISTER_H
-#define LEC1_REGISTER_H
+#ifndef CSAPP_CPU_H
+#define CSAPP_CPU_H
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -178,9 +178,33 @@ typedef struct REGISTER_STRUCT
     };
     uint64_t rip;
 } reg_t;
-reg_t reg;
+
+typedef struct CORE_STRUCT
+{
+    union
+    {
+        uint64_t rip;
+        uint32_t eip;
+    };
+
+    uint32_t CF;
+    uint32_t ZF;
+    uint32_t SF;
+    uint32_t OF;
+
+    reg_t       reg;
+    uint64_t    pdbr;   // page directory base register
+} core_t;
+#define NUM_CORES 1
+core_t CORES[NUM_CORES];
+uint64_t ACTIVE_CORE;
+
+#define MAX_INSTRUCTION_CHAR 64
+#define NUM_INSTRTYPE 14
+
+void instruction_cycle(core_t *core);
+
+uint64_t va2pa(uint64_t va, core_t *core);
 
 
-#endif //LEC1_REGISTER_H
-
-
+#endif //CSAPP_CPU_H
