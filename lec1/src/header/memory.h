@@ -6,7 +6,7 @@
 #define CSAPP_MEMORY_H
 
 #include <stdint.h>
-#include "../header/cpu.h"
+#include "cpu.h"
 
 #define PHYSICAL_MEMORY_SPACE 65536
 #define MAX_INDEX_PHYSICAL_PAGE 15

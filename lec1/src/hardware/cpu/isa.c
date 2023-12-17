@@ -142,10 +142,7 @@ static void parse_instruction(const char *str, inst_t *inst, core_t *cr)
 
 static void parse_operand(const char *str, od_t *od, core_t *cr)
 {
-    od->type = EMPTY;
-    od-> = EMPTY;
-    od->type = EMPTY;
-    od->type = EMPTY;
+
 }
 
 /*======================================*/
@@ -392,6 +389,7 @@ void instruction_cycle(core_t *cr)
     inst_t inst;
     parse_instruction(inst_str, &inst, cr);
 
+    printf("cycle opt is %d \n", inst.op);
     // EXECUTE: get the function pointer or handler by the operator
     handler_t handler = handler_table[inst.op];
     // update CPU and memory according the instruction

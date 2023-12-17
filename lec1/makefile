@@ -10,14 +10,13 @@ COMMON = $(SRC_DIR)/common/print.c $(SRC_DIR)/common/convert.c
 
 # hardware
 CPU =$(SRC_DIR)/hardware/cpu/mmu.c $(SRC_DIR)/hardware/cpu/isa.c
-MEMORY = $(SRC_DIR)/hardware/memory/dram.c
-
+MEMORY =$(SRC_DIR)/hardware/memory/dram.c
 # main
 MAIN_HARDWARE = $(SRC_DIR)/main.c
 
 .PHONY:hardware
 hardware:
-	$(CC) $(CFLAGS) -I$(SRC_DIR) $(COMMON) $(CPU) $(MEMORY) $(DISK) $(MAIN_HARDWARE) -o $(EXE_HARDWARE)
+	$(CC) $(CFLAGS) -I$(SRC_DIR) $(COMMON) $(CPU) $(MEMORY)  $(MAIN_HARDWARE) -o $(EXE_HARDWARE)
 	./$(EXE_HARDWARE)
 
 clean:
