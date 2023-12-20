@@ -7,7 +7,7 @@
 #define CSAPP_COMMON_H
 
 #define DEBUG_INSTRUCTIONCYCLE      0x1
-#define DBBUG_REGISTERS             0x2
+#define DEBUG_REGISTERS             0x2
 #define DEBUG_PRINTSTACK            0x4
 #define DEBUG_PRINTCACHESET         0x8
 #define DEBUG_CACHEDETAILS          0x10

@@ -1,4 +1,4 @@
-CC = /usr/bin/gcc-9
+CC = /usr/bin/gcc
 CFLAGS = -Wall -g -O2 -Werror -std=gnu99 -Wno-unused-function
 
 EXE_HARDWARE = exe_hardware

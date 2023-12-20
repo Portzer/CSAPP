@@ -11,10 +11,11 @@ static void TestString2Uint();
 // symbols from isa and sram
 void print_register(core_t *cr);
 void print_stack(core_t *cr);
+void TestParsingOperand();
 
 int main()
 {
-    TestString2Uint();
+    TestParsingOperand();
     return 0;
 }
 
@@ -38,7 +39,7 @@ static void TestString2Uint()
 
     for (int i = 0; i < 12; ++ i)
     {
-        printf("%s => %lx\n", nums[i], string2uint(nums[i]));
+        printf("%s => %llx\n", nums[i], string2uint(nums[i]));
     }
 }
 
@@ -58,10 +59,10 @@ static void TestAddFunctionCallAndComputation()
     ac->reg.rbp = 0x7ffffffee110;
     ac->reg.rsp = 0x7ffffffee0f0;
 
-    ac->CF = 0;
-    ac->ZF = 0;
-    ac->SF = 0;
-    ac->OF = 0;
+    ac->flags.CF = 0;
+    ac->flags.ZF = 0;
+    ac->flags.OF = 0;
+    ac->flags.SF = 0;
 
     write64bits_dram(va2pa(0x7ffffffee110, ac), 0x0000000000000000, ac);    // rbp
     write64bits_dram(va2pa(0x7ffffffee108, ac), 0x0000000000000000, ac);

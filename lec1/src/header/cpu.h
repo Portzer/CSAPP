@@ -179,21 +179,40 @@ typedef struct REGISTER_STRUCT
     uint64_t rip;
 } reg_t;
 
+typedef struct CPU_FLAGS_STRUCT
+{
+    union
+    {
+        uint64_t __cpu_flag_value;
+        struct
+        {
+            // carry flag: detect overflow for unsigned operations
+            uint16_t CF;
+            // zero flag: result is zero
+            uint16_t ZF;
+            // sign flag: result is negative: highest bit
+            uint16_t SF;
+            // overflow flag: detect overflow for signed operations
+            uint16_t OF;
+        };
+    };
+} cpu_flag_t;
+
 typedef struct CORE_STRUCT
 {
+    // program counter or instruction pointer
     union
     {
         uint64_t rip;
         uint32_t eip;
     };
 
-    uint32_t CF;
-    uint32_t ZF;
-    uint32_t SF;
-    uint32_t OF;
+    // condition code flags of most recent (latest) operation
+    // condition codes will only be set by the following integer arithmetic instructions
+    cpu_flag_t flags;
 
+    // register files
     reg_t       reg;
-    uint64_t    pdbr;   // page directory base register
 } core_t;
 #define NUM_CORES 1
 core_t CORES[NUM_CORES];
