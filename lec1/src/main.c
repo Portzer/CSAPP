@@ -15,7 +15,7 @@ void TestParsingOperand();
 
 int main()
 {
-    TestParsingOperand();
+    TestAddFunctionCallAndComputation();
     return 0;
 }
 

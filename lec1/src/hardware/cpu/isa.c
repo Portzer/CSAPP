@@ -190,7 +190,104 @@ static uint64_t decode_operand(od_t *od)
 
 static void parse_instruction(const char *str, inst_t *inst, core_t *cr)
 {
-
+    char op_str[64] = {'\0'};
+    int op_len = 0;
+    char src_str[64] = {'\0'};
+    int src_len = 0;
+    char dst_str[64] = {'\0'};
+    int dst_len = 0;
+    int bc = 0;
+    int status = 0;
+    for (int i = 0; i < strlen(str); ++i) {
+        char c = str[i];
+        if (c == '(' || c == ')') {
+            bc++;
+        }
+        if (status == 0 && c != ' ') {
+            status = 1;
+        }
+        if (status == 1 && c == ' ') {
+            status = 2;
+            continue;
+        }
+        if (status == 2 && c != ' ') {
+            status = 3;
+        }
+        if (status == 3 && c == ',') {
+            status = 4;
+            continue;
+        }
+        if (status == 4 && c != ' ' && (bc == 0 || bc == 2)) {
+            status = 5;
+        }
+        if (status == 5 && c == ' ') {
+            status = 6;
+            continue;
+        }
+        if (status == 1) {
+            op_str[op_len] = c;
+            op_len++;
+            continue;
+        }
+        if (status == 3) {
+            src_str[src_len] = c;
+            src_len++;
+            continue;
+        }
+        if (status == 5) {
+            dst_str[dst_len] = c;
+            dst_len++;
+            continue;
+        }
+    }
+    printf("src is %s \n", src_str);
+    printf("dst is %s \n", dst_str);
+    parse_operand(src_str, &(inst->src), cr);
+    parse_operand(dst_str, &(inst->dst), cr);
+    if (strcmp(op_str, "mov") == 0 || strcmp(op_str, "movq") == 0) {
+        inst->op = INST_MOV;
+    }
+    else if (strcmp(op_str, "push") == 0)
+    {
+        inst->op = INST_PUSH;
+    }
+    else if (strcmp(op_str, "pop") == 0)
+    {
+        inst->op = INST_POP;
+    }
+    else if (strcmp(op_str, "leaveq") == 0)
+    {
+        inst->op = INST_LEAVE;
+    }
+    else if (strcmp(op_str, "callq") == 0)
+    {
+        inst->op = INST_CALL;
+    }
+    else if (strcmp(op_str, "retq") == 0)
+    {
+        inst->op = INST_RET;
+    }
+    else if (strcmp(op_str, "add") == 0)
+    {
+        inst->op = INST_ADD;
+    }
+    else if (strcmp(op_str, "sub") == 0)
+    {
+        inst->op = INST_SUB;
+    }
+    else if (strcmp(op_str, "cmpq") == 0)
+    {
+        inst->op = INST_CMP;
+    }
+    else if (strcmp(op_str, "jne") == 0)
+    {
+        inst->op = INST_JNE;
+    }
+    else if (strcmp(op_str, "jmp") == 0)
+    {
+        inst->op = INST_JMP;
+    }
+    debug_printf(DEBUG_PARSEINST, "[%s (%d)] [%s (%d)] [%s (%d)]\n", op_str, inst->op, src_str, inst->src.type, dst_str, inst->dst.type);
 }
 
 static void parse_operand(const char *str, od_t *od, core_t *cr)
