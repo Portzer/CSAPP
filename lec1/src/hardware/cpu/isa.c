@@ -376,7 +376,7 @@ static void parse_operand(const char *str, od_t *od, core_t *cr)
         if (scal_len > 0) {
             uint64_t scal_t = string2uint(scal);
             if (scal_t != 1 && scal_t != 2 && scal_t != 4 && scal_t != 8) {
-                printf("scal is error %llx \n", scal_t);
+                printf("scal is error %lx \n", scal_t);
                 exit(1);
             }
             od->scal = scal_t;
@@ -631,8 +631,16 @@ static void add_handler(od_t *src_od, od_t *dst_od, core_t *cr)
         // src: register (value: int64_t bit map)
         // dst: register (value: int64_t bit map)
         uint64_t val = *(uint64_t *)dst + *(uint64_t *)src;
-
+        int src_ind = (src >> 63 & 0x1);
+        int dst_ind = (src >> 63 & 0x1);
+        int val_ind = (val >> 63 & 0x1);
         // set condition flags
+        cr->flags.ZF = (val == 0);
+        cr->flags.CF = (val < src);
+        cr->flags.SF = (val >> 63 & 0x1);
+        cr->flags.OF = (((val_ind == 0) && (src_ind == 1 && dst_ind == 1)) ||
+                        ((val_ind == 1) && (src_ind == 0 && dst_ind == 0)));
+
 
         // update registers
         *(uint64_t *)dst = val;
@@ -645,6 +653,31 @@ static void add_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 
 static void sub_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 {
+    // src: register (value: int64_t bit map)
+    // dst: register (value: int64_t bit map)
+    // dst = dst - src = dst + (-src)
+    uint64_t src = decode_operand(src_od);
+    uint64_t dst = decode_operand(dst_od);
+    uint64_t val = *(uint64_t *)dst + (~src + 1);
+
+    int val_sign = ((val >> 63) & 0x1);
+    int src_sign = ((src >> 63) & 0x1);
+    int dst_sign = ((*(uint64_t *)dst >> 63) & 0x1);
+
+    // set condition flags
+    cr->flags.CF = (val > *(uint64_t *)dst); // unsigned
+
+    cr->flags.ZF = (val == 0);
+    cr->flags.SF = val_sign;
+
+    cr->flags.OF = (src_sign == 1 && dst_sign == 0 && val_sign == 1) || (src_sign == 0 && dst_sign == 1 && val_sign == 0);
+
+    // update registers
+    *(uint64_t *)dst = val;
+    // signed and unsigned value follow the same addition. e.g.
+    // 5 = 0000000000000101, 3 = 0000000000000011, -3 = 1111111111111101, 5 + (-3) = 0000000000000010
+    next_rip(cr);
+    return;
 }
 
 static void cmp_handler(od_t *src_od, od_t *dst_od, core_t *cr)
@@ -664,7 +697,8 @@ static void jmp_handler(od_t *src_od, od_t *dst_od, core_t *cr)
 void instruction_cycle(core_t *cr)
 {
     // FETCH: get the instruction string by program counter
-    const char *inst_str = (const char *)cr->rip;
+    char inst_str[MAX_INSTRUCTION_CHAR+10];
+    readinst_dram(va2pa(cr->rip, cr), inst_str, cr);
     debug_printf(DEBUG_INSTRUCTIONCYCLE, "%lx    %s\n", cr->rip, inst_str);
 
     // DECODE: decode the run-time instruction operands
@@ -687,11 +721,11 @@ void print_register(core_t *cr)
 
     reg_t reg = cr->reg;
 
-    printf("rax = %llu\trbx = %llu\trcx = %llu\trdx = %llu\n",
+    printf("rax = %lx\trbx = %lx\trcx = %lx\trdx = %lx\n",
            reg.rax, reg.rbx, reg.rcx, reg.rdx);
-    printf("rsi = %llu\trdi = %llu\trbp = %llu\trsp = %llu\n",
+    printf("rsi = %lx\trdi = %lx\trbp = %lx\trsp = %lx\n",
            reg.rsi, reg.rdi, reg.rbp, reg.rsp);
-    printf("rip = %llu\n", cr->rip);
+    printf("rip = %lx\n", cr->rip);
     printf("CF = %u\tZF = %u\tSF = %u\tOF = %u\n",
            cr->flags.CF, cr->flags.ZF, cr->flags.SF, cr->flags.OF);
 }
@@ -711,7 +745,7 @@ void print_stack(core_t *cr)
     for (int i = 0; i < 2 * n; ++ i)
     {
         uint64_t *ptr = (uint64_t *)(high - i);
-        printf("0x%llu : %llu", va, (uint64_t)*ptr);
+        printf("0x%lx : %lx", va, (uint64_t)*ptr);
 
         if (i == n)
         {
@@ -751,9 +785,9 @@ void TestParsingOperand()
 
         printf("\n%s\n", strs[i]);
         printf("od enum type: %d\n", od.type);
-        printf("od imm: %llu\n", od.imm);
-        printf("od reg1:%llu\n", od.reg1);
-        printf("od reg2:%llu\n", od.reg2);
-        printf("od scal: %llu\n", od.scal);
+        printf("od imm: %lx\n", od.imm);
+        printf("od reg1:%lx\n", od.reg1);
+        printf("od reg2:%lx\n", od.reg2);
+        printf("od scal: %lx\n", od.scal);
     }
 }

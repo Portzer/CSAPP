@@ -6,6 +6,8 @@
 #include<header/cpu.h>
 #include<header/memory.h>
 #include<header/common.h>
+#include <string.h>
+#include <assert.h>
 uint64_t read64bits_dram(uint64_t paddr, core_t *cr)
 {
     if (DEBUG_ENABLE_SRAM_CACHE == 1)
@@ -42,5 +44,25 @@ void write64bits_dram(uint64_t paddr, uint64_t data, core_t *cr)
         pm[paddr + 5] = (data >> 40) & 0xff;
         pm[paddr + 6] = (data >> 48) & 0xff;
         pm[paddr + 7] = (data >> 56) & 0xff;
+    }
+}
+
+void writeinst_dram(uint64_t paddr, char *data, core_t *core)
+{
+        int len = strlen(data);
+        assert(len < MAX_INSTRUCTION_CHAR);
+    for (int i = 0; i < MAX_INSTRUCTION_CHAR; i++) {
+        if (i < len) {
+            pm[paddr + i] = data[i];
+        } else {
+            pm[paddr + i] = '\0';
+        }
+    }
+}
+
+void readinst_dram(uint64_t paddr, char *buf, core_t *core) {
+
+    for (int i = 0; i < MAX_INSTRUCTION_CHAR; ++i) {
+        buf[i] = pm[paddr + i];
     }
 }
