@@ -80,3 +80,52 @@ int read_elf(const char *filename, uint64_t bufaddr)
     assert(string2uint((char *)bufaddr) == line_counter);
     return line_counter;
 }
+
+
+void parse_elf(char *filename,elf_t *elf){
+
+
+    assert(elf!=NULL); 
+    int line_count = read_elf(filename, (uint64_t) (&(elf->buffer)));
+    int sh_count  = string2uint(elf->buffer[1]);
+    elf->sht = malloc(sh_count*sizeof(sh_entry_t));
+    for (int i = 0; i < line_count; i++)
+    {
+        parse_sh(elf->buffer[i+2],&(elf->sht[i]));
+    }
+    
+
+}
+
+static void parse_sh(char *str,sh_entry_t *sh){
+    //声明一个指向指针数组的指针
+    char ** cols;
+    //
+    int num = parse_table_entry(str,&cols)
+
+}
+
+//解析.text,0x0,4,22,放入到ent中
+static int parse_table_entry(char *str, char *** ent){
+    int col_count = 1;
+    int len = strlen(str);
+    //获取有效字符串的个数
+    for (int i = 0; i < len; i++)
+    {
+        if(str[i]==','||str[i]=='\0'){
+            col_count ++;
+        }
+    }
+    int col_index = 0;
+    int col_width = 0;
+    char ** arr = malloc(col_count*sizeof(char *));
+    * ent = arr;
+    for (int i = 0; i < count; i++)
+    {
+        /* code */
+    }
+    
+
+
+    
+} 

@@ -9,14 +9,18 @@
 
 int read_elf(const char *filename, uint64_t bufaddr);
 
+int parse_table_entry(char *str, char ***ent);
+void parse_sh(char *str, sh_entry_t *sh);
+void free_table_entry(char **ent, int n);
+
+void print_sh_entry(sh_entry_t *sh);
+
+void parse_elf(char *filename, elf_t *elf);
+void free_elf(elf_t *elf);
+
 int main()
 {
-    char buf[MAX_ELF_FILE_LENGTH][MAX_ELF_FILE_WIDTH];
-
-    int count = read_elf("./files/exe/sum_elf.text", (uint64_t)&buf);
-    for (int i = 0; i < count; ++ i)
-    {
-        printf("%s\n", buf[i]);
-    }
-    return 0;
+    elf_t elf;
+    parse_elf("./files/exe/sum.elf.txt", &elf);
+    free_elf(&elf);
 }

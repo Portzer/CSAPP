@@ -9,6 +9,7 @@
 #define MAX_CHAR_SECTION_NAME 32
 #define MAX_CHAR_SYMBOL_NAME (64)
 
+//section header
 typedef struct {
     char sh_name[MAX_CHAR_SECTION_NAME];
     uint64_t sh_addr;
@@ -28,7 +29,7 @@ typedef enum {
     STT_FUNC
 } st_type_t;
 
-
+//sym
 typedef struct
 {
     char st_name[MAX_CHAR_SECTION_NAME];
@@ -46,9 +47,10 @@ typedef struct
 {
     char buffer[MAX_ELF_FILE_LENGTH][MAX_ELF_FILE_WIDTH];
     uint64_t line_count;
-
     sh_entry_t *sht;
 } elf_t;
 
 
 #endif //CSAPP_LINKER_H
+void parse_elf(char *filename, elf_t *elf);
+void free_elf(elf_t *elf);
