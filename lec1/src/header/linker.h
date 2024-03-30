@@ -25,7 +25,7 @@ typedef enum{
 
 typedef enum {
     STT_NOTYPE,
-    STT_GLOBAL,
+    STT_OBJECT,
     STT_FUNC
 } st_type_t;
 
@@ -47,9 +47,13 @@ typedef struct
 {
     char buffer[MAX_ELF_FILE_LENGTH][MAX_ELF_FILE_WIDTH];
     uint64_t line_count;
-    sh_entry_t *sht;
-} elf_t;
 
+    uint64_t sht_count;
+    sh_entry_t *sht;
+
+    uint64_t symt_count;
+    st_entry_t *symt;
+} elf_t;
 
 #endif //CSAPP_LINKER_H
 void parse_elf(char *filename, elf_t *elf);
