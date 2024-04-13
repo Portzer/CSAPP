@@ -20,7 +20,7 @@ hardware:
 	./$(EXE_HARDWARE)
 .PHONY:link
 link:
-	$(CC) $(CFLAGS) -I$(SRC_DIR) $(COMMON) $(SRC_DIR)/test/test_elf.c $(SRC_DIR)/linker/parseElf.c -o ./bin/test_elf
+	$(CC) $(CFLAGS) -I$(SRC_DIR) $(COMMON) $(SRC_DIR)/test/test_elf.c $(SRC_DIR)/linker/parseElf.c  $(SRC_DIR)/linker/static_link.c -o ./bin/test_elf
 	./bin/test_elf
 clean:
 	rm -f *.o *~ $(EXE_HARDWARE)

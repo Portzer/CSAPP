@@ -55,6 +55,9 @@ typedef struct
     st_entry_t *symt;
 } elf_t;
 
-#endif //CSAPP_LINKER_H
 void parse_elf(char *filename, elf_t *elf);
 void free_elf(elf_t *elf);
+
+void link_elf(elf_t **src, int count, elf_t *dest);
+#endif //CSAPP_LINKER_H
+

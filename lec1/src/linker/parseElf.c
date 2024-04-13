@@ -229,10 +229,10 @@ void parse_elf(char *filename,elf_t *elf){
     {
         printf("[%d]\t%s\n", i, elf->buffer[i]);
     }
-    int sh_count  = string2uint(elf->buffer[1]);
-    elf->sht = malloc(sh_count*sizeof(sh_entry_t));
+    elf->sht_count = string2uint(elf->buffer[1]);;
+    elf->sht = malloc(elf->sht_count *sizeof(sh_entry_t));
     sh_entry_t *smyt_sh = NULL;
-    for (int i = 0; i < sh_count; i++)
+    for (int i = 0; i < elf->sht_count; i++)
     {
         parse_sh(elf->buffer[i + 2], &(elf->sht[i]));
 
