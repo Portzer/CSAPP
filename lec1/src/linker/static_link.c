@@ -27,11 +27,33 @@ static int symbol_precedence(st_entry_t *sym);
 
 static void compute_section_header(elf_t *dst, stable_t *smap_table, int *smap_count);
 
+static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst, stable_t *smap_table, int *smap_count);
 
 static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst, stable_t *smap_table, int *smap_count);
 
 static const char *get_stb_string(st_bind_t bind);
 static const char *get_stt_string(st_type_t type);
+
+static void R_X86_64_32_handler(elf_t *dst, sh_entry_t *sh,
+                                int row_referencing, int col_referencing, int addend,
+                                st_entry_t *sym_referenced);
+static void R_X86_64_PC32_handler(elf_t *dst, sh_entry_t *sh,
+                                  int row_referencing, int col_referencing, int addend,
+                                  st_entry_t *sym_referenced);
+static void R_X86_64_PLT32_handler(elf_t *dst, sh_entry_t *sh,
+                                   int row_referencing, int col_referencing, int addend,
+                                   st_entry_t *sym_referenced);
+
+typedef void (*rela_handler_t)(elf_t *dst, sh_entry_t *sh,
+                               int row_referencing, int col_referencing, int addend,
+                               st_entry_t *sym_referenced);
+
+static rela_handler_t handler_table[3] = {
+        &R_X86_64_32_handler,       // 0
+        &R_X86_64_PC32_handler,     // 1
+        // linux commit b21ebf2: x86: Treat R_X86_64_PLT32 as R_X86_64_PC32
+        &R_X86_64_PC32_handler,     // 2
+};
 
 
 void link_elf(elf_t **srcp, int count, elf_t *dest) {
@@ -65,6 +87,19 @@ void link_elf(elf_t **srcp, int count, elf_t *dest) {
         printf("%s\n", dest->buffer[i]);
     }
 
+
+    // relocating: update the relocation entries from ELF files into EOF buffer
+    relocation_processing(srcp, count, dest, smap_table, &smap_count);
+
+    // finally, check EOF file
+    if ((DEBUG_VERBOSE_SET & DEBUG_LINKER) != 0)
+    {
+        printf("----\nfinal output EOF:\n");
+        for (int i = 0; i < dest->line_count; ++ i)
+        {
+            printf("%s\n", dest->buffer[i]);
+        }
+    }
 
 
 }
@@ -274,6 +309,7 @@ static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst, stable_t *smap
     int sym_section_offset = 0;
     for (int sh_index = 0; sh_index < dst->sht_count; sh_index++) {
         sh_entry_t *target_sh = &dst->sht[sh_index];
+        sym_section_offset = 0;
         //遍历所有的src
         for (int i = 0; i < num_srcs; i++) {
             //遍历所有header
@@ -303,8 +339,11 @@ static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst, stable_t *smap
                             for (int t = 0; t < st->st_size; t++) {
                                 int dest_index = line_written + t;
                                 int src_index = srcs[i]->sht[src_section_header_index].sh_offset + st->st_value + t;
+                                assert(dest_index < MAX_ELF_FILE_LENGTH);
+                                assert(src_index < MAX_ELF_FILE_LENGTH);
                                 strcpy(dst->buffer[dest_index], srcs[i]->buffer[src_index]);
                             }
+                            assert(symt_written < dst->symt_count);
                             strcpy(dst->symt[symt_written].st_name, st->st_name);
                             dst->symt[symt_written].bind = st->bind;
                             dst->symt[symt_written].type = st->type;
@@ -317,6 +356,7 @@ static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst, stable_t *smap
                             printf("symbol '%ld' copied\n", st->st_size);
                             line_written += st->st_size;
                             sym_section_offset += st->st_size;
+                            printf("sym is %s sym_section_offset is %d \n", st->st_name, sym_section_offset);
                         }
                     }
                 }
@@ -333,6 +373,137 @@ static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst, stable_t *smap
     }
     assert(line_written == dst->line_count);
 
+}
+
+
+
+static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst, stable_t *smap_table, int *smap_count){
+
+    sh_entry_t *eof_text_sh = NULL;
+    sh_entry_t *eof_data_sh = NULL;
+    for (int i = 0; i < dst->sht_count; ++i) {
+        if (strcmp(dst->sht[i].sh_name, ".text") == 0) {
+            eof_text_sh = &(dst->sht[i]);
+        }else if (strcmp(dst->sht[i].sh_name, ".data") == 0) {
+            eof_data_sh = &(dst->sht[i]);
+        }
+    }
+    for (int i = 0; i < num_srcs; ++i) {
+
+        elf_t *src = srcs[i];
+        printf("rel data sym is %ld  \n", src->reldata_count);
+        for (int j = 0; j < src->reldata_count; ++j) {
+            rl_entry_t *rl = &src->reldata[j];
+
+            for (int k = 0; k < src->symt_count; ++k) {
+                st_entry_t *sym = &src->symt[k];
+
+                if (strcmp(src->symt[k].st_shndx, ".data") == 0) {
+                    int sym_start = sym->st_value;
+                    int sym_end = sym->st_value + sym->st_size;
+                    if (rl->r_row >= sym_start && rl->r_row <= sym_end) {
+                        int smap_found = 0;
+                        for (int l = 0; l < *smap_count; ++l) {
+                            if (smap_table[l].src == &src->symt[k]) {
+                                smap_found = 1;
+                                st_entry_t *st_referencing = smap_table[l].dest;
+                                for (int m = 0; m < *smap_count; ++m) {
+                                    if (strcmp(src->symt[rl->sym].st_name, smap_table[m].dest->st_name) == 0 &&
+                                        smap_table[m].dest->bind == STB_GLOBAL)
+                                    {
+                                        st_entry_t *eof_referenced = smap_table[m].dest;
+                                        (handler_table[(int)rl->type])(
+                                                dst, eof_data_sh,
+                                                rl->r_row - sym->st_value + st_referencing->st_value,
+                                                rl->r_col,
+                                                rl->r_addend,
+                                                eof_referenced);
+                                        goto NEXT_REFERENCE_IN_DATA;
+                                    }
+                                }
+                            }
+                        }
+                        assert(smap_found==1);
+                    }
+                    NEXT_REFERENCE_IN_DATA:
+                    ;
+                }
+            }
+        }
+        for (int j = 0; j < src->reltext_count; ++j) {
+
+            rl_entry_t *rl = &src->reltext[j];
+
+            for (int k = 0; k < src->symt_count; ++k) {
+
+                st_entry_t *sym = &src->symt[k];
+                if (strcmp(sym->st_shndx, ".text") == 0) {
+
+                    int sym_text_start = sym->st_value;
+                    int sym_text_end =  sym->st_value + sym->st_size;
+                    if (rl->r_row >= sym_text_start && rl->r_row <= sym_text_end) {
+
+                        int smap_found = 0;
+                        for (int l = 0; l < *smap_count; ++l) {
+                            if (smap_table[l].src == sym) {
+                                smap_found = 1;
+                                st_entry_t *st_referencing = smap_table[l].dest;
+                                for (int m = 0; m < *smap_count; ++m) {
+
+                                    if (strcmp(src->symt[rl->sym].st_name, smap_table[m].dest->st_name) == 0 &&
+                                        smap_table[m].dest->bind == STB_GLOBAL) {
+
+                                        st_entry_t *eof_referenced = smap_table[m].dest;
+
+                                        (handler_table[(int) rl->type])(
+                                                dst, eof_text_sh,
+                                                rl->r_row - sym->st_value + st_referencing->st_value,
+                                                rl->r_col,
+                                                rl->r_addend,
+                                                eof_referenced);
+                                        goto NEXT_REFERENCE_IN_TEXT;
+                                    }
+                                }
+                            }
+                        }
+                        assert(smap_found==1);
+                    }
+                }
+            }
+            NEXT_REFERENCE_IN_TEXT:
+            ;
+        }
+    }
+}
+
+
+// relocating handlers
+
+static void R_X86_64_32_handler(elf_t *dst, sh_entry_t *sh,
+                                int row_referencing, int col_referencing, int addend,
+                                st_entry_t *sym_referenced)
+{
+    printf("row = %d, col = %d, symbol referenced = %s\n",
+           row_referencing, col_referencing, sym_referenced->st_name
+    );
+}
+
+static void R_X86_64_PC32_handler(elf_t *dst, sh_entry_t *sh,
+                                  int row_referencing, int col_referencing, int addend,
+                                  st_entry_t *sym_referenced)
+{
+    printf("row = %d, col = %d, symbol referenced = %s\n",
+           row_referencing, col_referencing, sym_referenced->st_name
+    );
+}
+
+static void R_X86_64_PLT32_handler(elf_t *dst, sh_entry_t *sh,
+                                   int row_referencing, int col_referencing, int addend,
+                                   st_entry_t *sym_referenced)
+{
+    printf("row = %d, col = %d, symbol referenced = %s\n",
+           row_referencing, col_referencing, sym_referenced->st_name
+    );
 }
 
 static const char *get_stb_string(st_bind_t bind)

@@ -16,7 +16,7 @@ void TestParsingOperand();
 
 int main()
 {
-    TestSumRecursiveCondition();
+    TestString2Uint();
     return 0;
 }
 

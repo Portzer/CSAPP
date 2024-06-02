@@ -154,6 +154,16 @@ static void print_symtab_entry(st_entry_t *ste)
                  ste->st_size);
 }
 
+static void print_relocation_entry(rl_entry_t *rte)
+{
+    debug_printf(DEBUG_LINKER, "relocation entry: %d\t%d\t%d\t%d\t%d\n",
+                 rte->r_row,
+                 rte->r_col,
+                 rte->type,
+                 rte->sym,
+                 rte->r_addend);
+}
+
 static void parse_symtab(char *str,st_entry_t *st){
     //sum,STB_GLOBAL,STT_FUNCTION,.text,0,22
     char **cols;
@@ -220,6 +230,35 @@ static void parse_sh(char *str,sh_entry_t *sh){
     free_table_entry(cols,num_col);
 }
 
+static void parse_relocation(char *str, rl_entry_t *rel) {
+    /// 4,7,R_X86_64_PC32,0,-4
+    char **cols;
+    int num_col = parse_table_entry(str, &cols);
+    assert(num_col==5);
+    assert(rel!=NULL);
+    rel->r_row = string2uint(cols[0]);
+    rel->r_col = string2uint(cols[1]);
+    if (strcmp(cols[2], "R_X86_64_PLT32") == 0)
+    {
+        rel->type = R_X86_64_PLT32;
+    }
+    else if (strcmp(cols[2], "R_X86_64_32") == 0)
+    {
+        rel->type = R_X86_64_32;
+    }
+    else if (strcmp(cols[2], "R_X86_64_PC32") == 0){
+        rel->type = R_X86_64_PC32;
+    }else {
+        printf("rel type is neiter R_X86_64_PLT32, R_X86_64_32, nor R_X86_64_PC32\n");
+        exit(0);
+    }
+
+    rel->sym = string2uint(cols[3]);
+    uint64_t  bitmap = string2uint(cols[4]);
+    rel->r_addend = *(int64_t *) &bitmap;
+    free_table_entry(cols, num_col);
+}
+
 void parse_elf(char *filename,elf_t *elf){
 
 
@@ -232,14 +271,20 @@ void parse_elf(char *filename,elf_t *elf){
     elf->sht_count = string2uint(elf->buffer[1]);;
     elf->sht = malloc(elf->sht_count *sizeof(sh_entry_t));
     sh_entry_t *smyt_sh = NULL;
+    sh_entry_t *rel_text_sh = NULL;
+    sh_entry_t *rel_data_sh= NULL;
+
     for (int i = 0; i < elf->sht_count; i++)
     {
         parse_sh(elf->buffer[i + 2], &(elf->sht[i]));
-
         print_sh_entry(&(elf->sht[i]));
         //获取符号表.symtab,0x0,26,2
         if (strcmp(elf->sht[i].sh_name, ".symtab") == 0) {
             smyt_sh = &(elf->sht[i]);
+        }else if (strcmp(elf->sht[i].sh_name, ".rel.text") == 0){
+            rel_text_sh = &(elf->sht[i]);
+        } else if (strcmp(elf->sht[i].sh_name, ".rel.data") == 0) {
+            rel_data_sh = &(elf->sht[i]);
         }
     }
 
@@ -249,7 +294,40 @@ void parse_elf(char *filename,elf_t *elf){
     for (int i = 0; i < smyt_sh->sh_size; i++) {
         parse_symtab(elf->buffer[i + smyt_sh->sh_offset], &(elf->symt[i]));
         print_symtab_entry(&(elf->symt[i]));
+    }
+    if (rel_text_sh != NULL) {
+        elf->reltext_count = rel_text_sh->sh_size;
+        elf->reltext = malloc(elf->reltext_count * sizeof(rl_entry_t));
+        for (int i = 0; i < rel_text_sh->sh_size; i++) {
+            parse_relocation(
+                    elf->buffer[i + rel_text_sh->sh_offset],
+                    &(elf->reltext[i])
+            );
+            int st = elf->reltext[i].sym;
+            assert(0 <= st && st < elf->symt_count);
 
+            print_relocation_entry(&(elf->reltext[i]));
+        }
+    }else{
+        elf->reltext_count = 0;
+        elf->reltext = NULL;
+    }
+    if (rel_data_sh != NULL) {
+        elf->reldata_count = rel_data_sh->sh_size;
+        elf->reldata = malloc(elf->reldata_count * sizeof(rl_entry_t));
+        for (int i = 0; i < rel_data_sh->sh_size; i++) {
+            parse_relocation(
+                    elf->buffer[i + rel_data_sh->sh_offset],
+                    &(elf->reldata[i])
+            );
+            int st = elf->reldata[i].sym;
+            assert(0 <= st && st < elf->symt_count);
+
+            print_relocation_entry(&(elf->reldata[i]));
+        }
+    }else{
+        elf->reldata_count = 0;
+        elf->reldata = NULL;
     }
 
 }
@@ -259,4 +337,5 @@ void free_elf(elf_t *elf)
 
     free(elf->sht);
 }
+
 
