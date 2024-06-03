@@ -56,18 +56,20 @@ def build(key):
     gcc_map = {
         KEY_MACHINE : [
             "/usr/bin/gcc",
-            "-Wall", "-g", "-O2", "-Werror", "-std=gnu99", "-Wno-unused-function",
+            "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
             "-I", "./src",
             "./src/test/test_machine.c",
             "./src/common/print.c",
             "./src/common/convert.c",
+            "./src/common/trie.c",
+            "./src/common/cleanup.c",
             "./src/hardware/cpu/isa.c",
             "./src/hardware/cpu/mmu.c",
             "./src/hardware/memory/dram.c",
             "-o", EXE_BIN_MACHINE],
         KEY_LINKER : [
             "/usr/bin/gcc",
-            "-Wall", "-g", "-O2", "-Werror", "-std=gnu99", "-Wno-unused-function",
+            "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
             "-I", "./src",
             "./src/test/test_elf.c",
             "./src/common/print.c",
@@ -94,6 +96,17 @@ def run(key):
         exit()
     subprocess.run([bin_map[key]])
 
+def debug(key):
+    assert(os.path.isdir("./bin/"))
+    bin_map = {
+        KEY_MACHINE : EXE_BIN_MACHINE,
+        KEY_LINKER : EXE_BIN_LINKER
+    }
+    if not key in bin_map:
+        print("input the correct binary key:", bin_map.keys())
+        exit()
+    subprocess.run(["/usr/bin/gdb", bin_map[key]])
+
 def mem_check(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
@@ -112,23 +125,27 @@ def mem_check(key):
 
 # main
 assert(len(sys.argv) >= 2)
+argv_1_lower = sys.argv[1].lower()
 
-# single argument "python3 cmd.py argv[1]"
-if sys.argv[1] == "build" or sys.argv[1] == "b":
+if "build".startswith(argv_1_lower):
     assert(len(sys.argv) == 3)
     build(sys.argv[2])
-elif sys.argv[1] == "run" or sys.argv[1] == "r":
+elif "run".startswith(argv_1_lower):
+    assert(len(sys.argv) == 3)
     run(sys.argv[2])
-elif sys.argv[1] == KEY_MACHINE:
+elif "debug".startswith(argv_1_lower):
+    assert(len(sys.argv) == 3)
+    debug(sys.argv[2])
+elif KEY_MACHINE.lower().startswith(argv_1_lower):
     build(KEY_MACHINE)
     run(KEY_MACHINE)
-elif sys.argv[1] == KEY_LINKER:
+elif KEY_LINKER.lower().startswith(argv_1_lower):
     build(KEY_LINKER)
     run(KEY_LINKER)
-elif sys.argv[1] == "mem":
+elif "memorycheck".startswith(argv_1_lower):
     assert(len(sys.argv) == 3)
     mem_check(sys.argv[2])
-elif sys.argv[1] == "clean":
-    pass
-elif sys.argv[1] == "count":
+elif "count".startswith(argv_1_lower):
     count_lines()
+elif "clean".startswith(argv_1_lower):
+    pass

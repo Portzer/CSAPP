@@ -391,7 +391,6 @@ static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst, stable
     for (int i = 0; i < num_srcs; ++i) {
 
         elf_t *src = srcs[i];
-        printf("rel data sym is %ld  \n", src->reldata_count);
         for (int j = 0; j < src->reldata_count; ++j) {
             rl_entry_t *rl = &src->reldata[j];
 
@@ -412,9 +411,9 @@ static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst, stable
                                         smap_table[m].dest->bind == STB_GLOBAL)
                                     {
                                         st_entry_t *eof_referenced = smap_table[m].dest;
-                                        (handler_table[(int)rl->type])(
+                                        (handler_table[(int) rl->type])(
                                                 dst, eof_data_sh,
-                                                rl->r_row - sym->st_value + st_referencing->st_value,
+                                                rl->r_row - sym->st_value + st_referencing->st_value - 1,
                                                 rl->r_col,
                                                 rl->r_addend,
                                                 eof_referenced);
@@ -457,7 +456,7 @@ static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst, stable
 
                                         (handler_table[(int) rl->type])(
                                                 dst, eof_text_sh,
-                                                rl->r_row - sym->st_value + st_referencing->st_value,
+                                                rl->r_row - sym->st_value + st_referencing->st_value - 1,
                                                 rl->r_col,
                                                 rl->r_addend,
                                                 eof_referenced);
