@@ -6,6 +6,7 @@
 #define CSAPP_LINKER_H
 #include <stdlib.h>
 #include <stdint.h>
+#include "datastruct.h"
 #define MAX_CHAR_SECTION_NAME 32
 #define MAX_CHAR_SYMBOL_NAME (64)
 
@@ -67,6 +68,9 @@ typedef struct
 
 #define MAX_ELF_FILE_LENGTH (64)    // max 64 effective lines
 #define MAX_ELF_FILE_WIDTH (128)    // max 128 chars per line
+
+hashtable_t *link_constant_dict;
+
 
 typedef struct
 {
