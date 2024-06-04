@@ -179,6 +179,8 @@ typedef struct REGISTER_STRUCT
     uint64_t rip;
 } reg_t;
 
+reg_t cpu_reg;
+
 typedef struct CPU_FLAGS_STRUCT
 {
     union

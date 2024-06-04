@@ -149,3 +149,5 @@ elif "count".startswith(argv_1_lower):
     count_lines()
 elif "clean".startswith(argv_1_lower):
     pass
+elif "copyright".startswith(argv_1_lower):
+    add_copyright_header()

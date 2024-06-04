@@ -4,7 +4,7 @@
 #include<assert.h>
 #include<stdio.h>
 #include<stdlib.h>
-#include<header/common.h>
+#include "../header/common.h"
 
 typedef void (*cleanup_t)();
 
@@ -62,4 +62,7 @@ void finally_cleanup()
     {
         (*events[i])();
     }
+
+    // clean itself
+    free(events);
 }

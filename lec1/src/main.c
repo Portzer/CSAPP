@@ -17,6 +17,7 @@ void TestParsingOperand();
 int main()
 {
     TestString2Uint();
+    finally_cleanup();
     return 0;
 }
 

@@ -2,13 +2,48 @@
 // Created by M on 2024/6/3.
 //
 
-
+#include<assert.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
-#include<header/cpu.h>
-#include<header/memory.h>
-#include<header/common.h>
+#include  "../header/cpu.h"
+#include  "../header/memory.h"
+#include  "../header/common.h"
+
+static int get_index(char c)
+{
+    if (c == '%')
+    {
+        return 36;
+    }
+    else if ('0' <= c && c <= '9')
+    {
+        return c - '0';
+    }
+    else if ('a' <= c && c <= 'z')
+    {
+        return c - 'a' + 10;
+    }
+    return -1;
+}
+
+static char get_char(int id)
+{
+    assert(0 <= id && id <= 36);
+    if (id == 36)
+    {
+        return '%';
+    }
+    else if (0 <= id && id <= 9)
+    {
+        return (char)('0' + id);
+    }
+    else if (10 <= id && id <= 35)
+    {
+        return (char)('a' + id - 10);
+    }
+    return '?';
+}
 
 void trie_insert(trie_node_t **root, char *key, uint64_t val)
 {
@@ -20,7 +55,7 @@ void trie_insert(trie_node_t **root, char *key, uint64_t val)
             *p = malloc(sizeof(trie_node_t));
         }
 
-        p = &((*p)->next[(int)key[i]]);
+        p = &((*p)->next[get_index(key[i])]);
     }
     if (*p == NULL)
     {
@@ -41,7 +76,7 @@ int trie_get(trie_node_t *root, char *key, uint64_t *val)
             // not found
             return 0;
         }
-        p = p->next[(int)key[i]];
+        p = p->next[get_index(key[i])];
     }
     *val = p->address;
     return 1;
@@ -56,7 +91,7 @@ void trie_free(trie_node_t *root)
     {
         return;
     }
-    for (int i = 0; i < 36; ++ i)
+    for (int i = 0; i <= 36; ++ i)
     {
         trie_free(root->next[i]);
     }
@@ -76,9 +111,9 @@ static void trie_dfs_print(trie_node_t *x, int level, char c)
             printf("[%c] %p\n", c, x);
         }
 
-        for (int j = 0; j < 128; ++ j)
+        for (int j = 0; j <= 36; ++ j)
         {
-            trie_dfs_print(x->next[j], level + 1, (char)j);
+            trie_dfs_print(x->next[j], level + 1, get_char(j));
         }
     }
 }

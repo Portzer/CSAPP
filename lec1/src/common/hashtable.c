@@ -15,9 +15,9 @@
 #include<assert.h>
 #include<stdlib.h>
 #include<string.h>
-#include<header/cpu.h>
-#include<header/memory.h>
-#include<header/common.h>
+#include  "../header/cpu.h"
+#include  "../header/memory.h"
+#include  "../header/common.h"
 
 uint64_t hash_function(char *str)
 {
