@@ -90,7 +90,6 @@ static void init_dictionary()
     }
 
     link_constant_dict = hashtable_construct(4);
-
     hashtable_insert(&link_constant_dict, "STB_LOCAL", STB_LOCAL);
     hashtable_insert(&link_constant_dict, "STB_GLOBAL", STB_GLOBAL);
     hashtable_insert(&link_constant_dict, "STB_WEAK", STB_WEAK);
