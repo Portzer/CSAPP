@@ -25,7 +25,30 @@ def make_build_directory():
     if not os.path.isdir("./bin/"):
         os.mkdir("./bin/")
 
+def format_include(s):
+    a = "#include<headers/"
+    b = "#include<"
 
+    # check include
+    if s.startswith(a):
+        s = "#include \"headers/" + s[len(a):]
+        for j in range(len(s)):
+            if s[j] == '>':
+                l = list(s)
+                l[j] = "\""
+                s = "".join(l)
+    elif s.startswith(b):
+        s = "#include <" + s[len(b):]
+    return s
+
+def format_whiteline(s):
+    space = 0
+    for c in s:
+        if c == ' ':
+            space += 1
+    if space == len(s) - 1 and s[-1] == '\n':
+        s = "\n"
+    return s
 def count_lines():
     # get files with paths
     filelist = list(Path(".").rglob("*.[ch]"))
@@ -61,8 +84,9 @@ def build(key):
             "./src/test/test_machine.c",
             "./src/common/print.c",
             "./src/common/convert.c",
-            "./src/common/trie.c",
             "./src/common/cleanup.c",
+            "./src/datastruct/trie.c",
+            "./src/datastruct/array.c",
             "./src/hardware/cpu/isa.c",
             "./src/hardware/cpu/mmu.c",
             "./src/hardware/memory/dram.c",
@@ -73,7 +97,12 @@ def build(key):
             "-I", "./src",
             "./src/test/test_elf.c",
             "./src/common/print.c",
+            "./src/common/tagmalloc.c",
+            "./src/common/cleanup.c",
+            "./src/datastruct/array.c",
             "./src/common/convert.c",
+            "./src/datastruct/hashtable.c",
+            "./src/datastruct/linkedlist.c",
             "./src/linker/parseElf.c",
             "./src/linker/static_link.c",
             "-o", EXE_BIN_LINKER
@@ -149,5 +178,3 @@ elif "count".startswith(argv_1_lower):
     count_lines()
 elif "clean".startswith(argv_1_lower):
     pass
-elif "copyright".startswith(argv_1_lower):
-    add_copyright_header()

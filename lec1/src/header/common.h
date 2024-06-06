@@ -6,17 +6,19 @@
 #ifndef CSAPP_COMMON_H
 #define CSAPP_COMMON_H
 
-#define DEBUG_INSTRUCTIONCYCLE      0x1
-#define DEBUG_REGISTERS             0x2
-#define DEBUG_PRINTSTACK            0x4
-#define DEBUG_PRINTCACHESET         0x8
-#define DEBUG_CACHEDETAILS          0x10
-#define DEBUG_MMU                   0x20
-#define DEBUG_LINKER                0x40
-#define DEBUG_LOADER                0x80
-#define DEBUG_PARSEINST             0x100
+#define DEBUG_INSTRUCTIONCYCLE      (0x1)
+#define DEBUG_REGISTERS             (0x2)
+#define DEBUG_PRINTSTACK            (0x4)
+#define DEBUG_PRINTCACHESET         (0x8)
+#define DEBUG_CACHEDETAILS          (0x10)
+#define DEBUG_MMU                   (0x20)
+#define DEBUG_LINKER                (0x40)
+#define DEBUG_LOADER                (0x80)
+#define DEBUG_PARSEINST             (0x100)
 
-#define DEBUG_VERBOSE_SET           0x41
+#define DEBUG_DATASTRUCTURE         (0x200)
+
+#define DEBUG_VERBOSE_SET           (0x241)
 
 
 #define DEBUG_ENABLE_PAGE_WALK      0
@@ -43,21 +45,11 @@ uint64_t string2uint_range(const char *str, int start, int end);
 /*======================================*/
 void add_cleanup_event(void *func);
 void finally_cleanup();
-
 /*======================================*/
-/*      data structures                 */
+/*      wrap of the memory              */
 /*======================================*/
-
-// trie
-typedef struct TRIE_NODE_STRUCT
-{
-    struct TRIE_NODE_STRUCT *next[37];
-    uint64_t address;
-} trie_node_t;
-
-void trie_insert(trie_node_t **root, char *key, uint64_t val);
-int trie_get(trie_node_t *root, char *key, uint64_t *val);
-void trie_free(trie_node_t *root);
-void trie_print(trie_node_t *root);
+void *tag_malloc(uint64_t size, char *tagstr);
+int tag_free(void *ptr);
+void tag_sweep(char *tagstr);
 
 #endif //CSAPP_COMMON_H
