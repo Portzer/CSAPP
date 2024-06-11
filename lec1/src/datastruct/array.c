@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "../header/common.h"
-#include "../header/datastruct.h"
+#include "../header/algorithm.h"
 
 array_t *array_construct(int size)
 {

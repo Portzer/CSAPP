@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "../header/common.h"
-#include "../header/datastruct.h"
+#include "../header/algorithm.h"
 
 static uint64_t compute_tag(char *str);
 static void tag_destroy();

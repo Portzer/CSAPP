@@ -6,7 +6,7 @@
 #define CSAPP_LINKER_H
 #include <stdlib.h>
 #include <stdint.h>
-#include "datastruct.h"
+#include "algorithm.h"
 #define MAX_CHAR_SECTION_NAME 32
 #define MAX_CHAR_SYMBOL_NAME (64)
 
@@ -92,6 +92,7 @@ typedef struct
 
 void parse_elf(char *filename, elf_t *elf);
 void free_elf(elf_t *elf);
+void write_eof(const char *filename, elf_t *eof);
 void link_elf(elf_t **src, int count, elf_t *dest);
 #endif //CSAPP_LINKER_H
 

@@ -8,6 +8,7 @@
 #include<assert.h>
 #include "../header/linker.h"
 #include "../header/common.h"
+#include "../header/instruction.h"
 
 #define MAX_STABLE_SIZE 64
 
@@ -40,9 +41,7 @@ static void R_X86_64_32_handler(elf_t *dst, sh_entry_t *sh,
 static void R_X86_64_PC32_handler(elf_t *dst, sh_entry_t *sh,
                                   int row_referencing, int col_referencing, int addend,
                                   st_entry_t *sym_referenced);
-static void R_X86_64_PLT32_handler(elf_t *dst, sh_entry_t *sh,
-                                   int row_referencing, int col_referencing, int addend,
-                                   st_entry_t *sym_referenced);
+
 
 typedef void (*rela_handler_t)(elf_t *dst, sh_entry_t *sh,
                                int row_referencing, int col_referencing, int addend,
@@ -375,6 +374,43 @@ static void merge_section(elf_t **srcs, int num_srcs, elf_t *dst, stable_t *smap
 
 }
 
+static uint64_t get_symbol_runtime_address(elf_t *dst, st_entry_t *sym)
+{
+    uint64_t text_address = 0x00400000;
+    uint64_t rodata_address = text_address;
+    int inst_size = sizeof(inst_t);
+    int data_size = sizeof(uint64_t);
+    uint64_t data_address = text_address;
+    for (int i = 0; i < dst->sht_count; ++i) {
+        sh_entry_t *sh = &dst->sht[i];
+        if (strcmp(sh->sh_name, ".text") == 0) {
+            rodata_address = text_address + sh->sh_size * inst_size;
+            data_address = rodata_address;
+        } else if (strcmp(sh->sh_name, ".rodata") == 0) {
+            data_address = data_address + sh->sh_size * data_size;
+        }
+    }
+    if (strcmp(sym->st_shndx, ".text") == 0) {
+        return text_address + sym->st_value * inst_size;
+    } else if (strcmp(sym->st_shndx, ".rodata") == 0) {
+        return rodata_address + sym->st_value * data_size;
+    } else if (strcmp(sym->st_shndx, ".data") == 0) {
+        return data_address + sym->st_value * data_size;
+    }
+    return 0xFFFFFFFFFFFFFFFF;
+}
+
+
+
+static void write_relocation(char *dst, uint64_t val)
+{
+    char temp[20];
+    sprintf(temp, "0x%016lx", val);
+    for (int i = 0; i < 18; ++ i)
+    {
+        dst[i] = temp[i];
+    }
+}
 
 
 static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst, stable_t *smap_table, int *smap_count){
@@ -485,6 +521,9 @@ static void R_X86_64_32_handler(elf_t *dst, sh_entry_t *sh,
     printf("row = %d, col = %d, symbol referenced = %s\n",
            row_referencing, col_referencing, sym_referenced->st_name
     );
+    uint64_t address = get_symbol_runtime_address(dst, sym_referenced);
+    char *s = &dst->buffer[sh->sh_offset + row_referencing][col_referencing];
+    write_relocation(s, address);
 }
 
 static void R_X86_64_PC32_handler(elf_t *dst, sh_entry_t *sh,
@@ -494,16 +533,14 @@ static void R_X86_64_PC32_handler(elf_t *dst, sh_entry_t *sh,
     printf("row = %d, col = %d, symbol referenced = %s\n",
            row_referencing, col_referencing, sym_referenced->st_name
     );
+    assert(strcmp(sh->sh_name,".text")==0);
+    uint64_t address = get_symbol_runtime_address(dst, sym_referenced);
+    uint64_t rip_value = 0x00400000 + (row_referencing + 1) * sizeof(inst_t);
+    char *s = &dst->buffer[sh->sh_offset + row_referencing][col_referencing];
+    write_relocation(s, address - rip_value);
 }
 
-static void R_X86_64_PLT32_handler(elf_t *dst, sh_entry_t *sh,
-                                   int row_referencing, int col_referencing, int addend,
-                                   st_entry_t *sym_referenced)
-{
-    printf("row = %d, col = %d, symbol referenced = %s\n",
-           row_referencing, col_referencing, sym_referenced->st_name
-    );
-}
+
 
 static const char *get_stb_string(st_bind_t bind)
 {

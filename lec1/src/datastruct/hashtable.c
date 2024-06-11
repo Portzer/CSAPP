@@ -5,7 +5,7 @@
 #include  "../header/cpu.h"
 #include  "../header/memory.h"
 #include  "../header/common.h"
-#include "../header/datastruct.h"
+#include "../header/algorithm.h"
 
 static uint64_t hash_function(char *str)
 {
