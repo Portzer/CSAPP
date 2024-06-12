@@ -387,7 +387,7 @@ static uint64_t get_symbol_runtime_address(elf_t *dst, st_entry_t *sym)
             rodata_address = text_address + sh->sh_size * inst_size;
             data_address = rodata_address;
         } else if (strcmp(sh->sh_name, ".rodata") == 0) {
-            data_address = data_address + sh->sh_size * data_size;
+            data_address = rodata_address + sh->sh_size * data_size;
         }
     }
     if (strcmp(sym->st_shndx, ".text") == 0) {
@@ -435,7 +435,7 @@ static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst, stable
 
                 if (strcmp(src->symt[k].st_shndx, ".data") == 0) {
                     int sym_start = sym->st_value;
-                    int sym_end = sym->st_value + sym->st_size;
+                    int sym_end = sym->st_value + sym->st_size - 1;
                     if (rl->r_row >= sym_start && rl->r_row <= sym_end) {
                         int smap_found = 0;
                         for (int l = 0; l < *smap_count; ++l) {
@@ -449,7 +449,7 @@ static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst, stable
                                         st_entry_t *eof_referenced = smap_table[m].dest;
                                         (handler_table[(int) rl->type])(
                                                 dst, eof_data_sh,
-                                                rl->r_row - sym->st_value + st_referencing->st_value - 1,
+                                                rl->r_row - sym->st_value + st_referencing->st_value,
                                                 rl->r_col,
                                                 rl->r_addend,
                                                 eof_referenced);
@@ -475,7 +475,7 @@ static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst, stable
                 if (strcmp(sym->st_shndx, ".text") == 0) {
 
                     int sym_text_start = sym->st_value;
-                    int sym_text_end =  sym->st_value + sym->st_size;
+                    int sym_text_end = sym->st_value + sym->st_size - 1;
                     if (rl->r_row >= sym_text_start && rl->r_row <= sym_text_end) {
 
                         int smap_found = 0;
@@ -492,7 +492,7 @@ static void relocation_processing(elf_t **srcs, int num_srcs, elf_t *dst, stable
 
                                         (handler_table[(int) rl->type])(
                                                 dst, eof_text_sh,
-                                                rl->r_row - sym->st_value + st_referencing->st_value - 1,
+                                                rl->r_row - sym->st_value + st_referencing->st_value,
                                                 rl->r_col,
                                                 rl->r_addend,
                                                 eof_referenced);

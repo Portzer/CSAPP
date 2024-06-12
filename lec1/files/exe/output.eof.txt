@@ -6,9 +6,9 @@
 push   %rbp
 mov    %rsp,%rbp
 sub    $0x10,%rsp
-mov    0x00000000000009a0
-lea    0x00000000000001b8(%rip),%rdi    
-callq  0x0000000000000000   
+mov    $0x2,%esi
+lea    0x0000000000000948(%rip),%rdi    
+callq  0x0000000000000160   
 mov    %rax,-0x8(%rbp)
 mov    -0x8(%rbp),%rax
 leaveq
@@ -29,8 +29,8 @@ add    %rax,-0x8(%rbp)
 addq   $0x1,-0x10(%rbp)
 mov    -0x10(%rbp),%rax
 cmp    -0x20(%rbp),%rax
-jb     0x00000000000001c8
-mov    0x0000000000000000(%rip),%rdx 
+jb     1e 
+mov    0x0000000000000170(%rip),%rdx 
 mov    -0x8(%rbp),%rax
 add    %rdx,%rax
 pop    %rbp
@@ -38,53 +38,6 @@ retq
 0x0000000012340000  
 0x000000000000abcd  
 0x0000000012340000  
-main,STB_GLOBAL,STT_FUNC,.text,0,10
-sum,STB_GLOBAL,STT_FUNC,.text,10,22
-array,STB_GLOBAL,STT_OBJECT,.data,0,2
-bias,STB_GLOBAL,STT_OBJECT,.data,2,1
-
-
-
-44
-3
-.text,0x400000,5,32
-.data,0x40080b,37,3
-.symtab,0x0,40,4
-push   %rbp
-mov    %rsp,%rbp
-sub    $0x10,%rsp
-mov    $0x2,%esi
-lea    ??????????????????(%rip),%rdi
-callq  ??????????????????
-mov    %rax,-0x8(%rbp)
-mov    -0x8(%rbp),%rax
-leaveq
-retq
-push   %rbp
-mov    %rsp,%rbp
-mov    %rdi,-0x18(%rbp)
-mov    %rsi,-0x20(%rbp)
-movq   $0x0,-0x8(%rbp)
-movq   $0x0,-0x10(%rbp)
-jmp    3d
-mov    -0x10(%rbp),%rax
-lea    0x0(,%rax,8),%rdx
-mov    -0x18(%rbp),%rax
-add    %rdx,%rax
-mov    (%rax),%rax
-add    %rax,-0x8(%rbp)
-addq   $0x1,-0x10(%rbp)
-mov    -0x10(%rbp),%rax
-cmp    -0x20(%rbp),%rax
-jb     1e
-mov    ??????????????????(%rip),%rdx
-mov    -0x8(%rbp),%rax
-add    %rdx,%rax
-pop    %rbp
-retq
-0x0000000012340000
-0x000000000000abcd
-0x0000000012340000
 main,STB_GLOBAL,STT_FUNC,.text,0,10
 sum,STB_GLOBAL,STT_FUNC,.text,10,22
 array,STB_GLOBAL,STT_OBJECT,.data,0,2
