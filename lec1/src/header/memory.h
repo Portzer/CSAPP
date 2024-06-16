@@ -22,4 +22,7 @@ void writeinst_dram(uint64_t paddr, char *data,core_t *core);
 
 void readinst_dram(uint64_t paddr, char  * buff ,core_t  *core);
 
-#endif //CSAPP_MEMORY_H
+void read_bus_cacheline(uint64_t paddr, uint8_t *block);
+
+void write_bus_cacheline(uint64_t paddr,uint8_t * block);
+#endif; //CSAPP_MEMORY_H

@@ -3,10 +3,12 @@
 //
 
 // Dynamic Random Access Memory
-#include<header/cpu.h>
-#include<header/memory.h>
-#include<header/common.h>
+#include"../../header/cpu.h"
+#include"../../header/memory.h"
+#include"../../header/common.h"
+#include "../../header/address.h"
 #include <string.h>
+#include <stdint.h>
 #include <assert.h>
 uint64_t read64bits_dram(uint64_t paddr, core_t *cr)
 {
@@ -64,5 +66,25 @@ void readinst_dram(uint64_t paddr, char *buf, core_t *core) {
 
     for (int i = 0; i < MAX_INSTRUCTION_CHAR; ++i) {
         buf[i] = pm[paddr + i];
+    }
+}
+
+
+void read_bus_cacheline(uint64_t paddr, uint8_t *block) {
+
+    uint64_t base_addr = ((paddr >> SRAM_CACHE_OFFSET_LENGTH) << SRAM_CACHE_OFFSET_LENGTH);
+
+    for (int i = 0; i < 1 << SRAM_CACHE_OFFSET_LENGTH; ++i) {
+        block[i] = pm[base_addr + i];
+    }
+
+}
+
+void write_bus_cacheline(uint64_t paddr, uint8_t *block) {
+
+    uint64_t base_addr = ((paddr >> SRAM_CACHE_OFFSET_LENGTH) << SRAM_CACHE_OFFSET_LENGTH);
+
+    for (int i = 0; i < 1 << SRAM_CACHE_OFFSET_LENGTH; ++i) {
+        pm[base_addr + i] = block[i];
     }
 }
