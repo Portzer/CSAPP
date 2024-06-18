@@ -23,7 +23,7 @@
 
 #define DEBUG_ENABLE_PAGE_WALK      0
 
-#define DEBUG_ENABLE_SRAM_CACHE     0
+#define DEBUG_ENABLE_SRAM_CACHE     1
 
 // printf wrapper
 uint64_t debug_printf(uint64_t open_set, const char *format, ...);

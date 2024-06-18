@@ -10,10 +10,21 @@
 #include <string.h>
 #include <stdint.h>
 #include <assert.h>
-uint64_t read64bits_dram(uint64_t paddr, core_t *cr)
+
+
+
+uint8_t sram_cache_read(uint64_t paddr);
+void sram_cache_write(uint64_t paddr, uint8_t data);
+
+uint64_t cpu_read64bits_dram(uint64_t paddr, core_t *cr)
 {
     if (DEBUG_ENABLE_SRAM_CACHE == 1)
     {
+        uint64_t val = 0x0;
+        for (int i = 0; i < 8; ++i) {
+            val += (sram_cache_read(paddr + i) << (i * 8));
+        }
+        return val;
     }
     else
     {
@@ -31,10 +42,14 @@ uint64_t read64bits_dram(uint64_t paddr, core_t *cr)
     }
 }
 
-void write64bits_dram(uint64_t paddr, uint64_t data, core_t *cr)
+void cpu_write64bits_dram(uint64_t paddr, uint64_t data, core_t *cr)
 {
     if (DEBUG_ENABLE_SRAM_CACHE == 1)
     {
+        for (int i = 0; i < 8; ++i) {
+            sram_cache_write(paddr + i, (data >> (i * 8)) & 0xff);
+        }
+        return;
     }
     else
     {
@@ -49,7 +64,7 @@ void write64bits_dram(uint64_t paddr, uint64_t data, core_t *cr)
     }
 }
 
-void writeinst_dram(uint64_t paddr, char *data, core_t *core)
+void cpu_writeinst_dram(uint64_t paddr, char *data, core_t *core)
 {
         int len = strlen(data);
         assert(len < MAX_INSTRUCTION_CHAR);
@@ -62,7 +77,7 @@ void writeinst_dram(uint64_t paddr, char *data, core_t *core)
     }
 }
 
-void readinst_dram(uint64_t paddr, char *buf, core_t *core) {
+void cpu_readinst_dram(uint64_t paddr, char *buf, core_t *core) {
 
     for (int i = 0; i < MAX_INSTRUCTION_CHAR; ++i) {
         buf[i] = pm[paddr + i];
