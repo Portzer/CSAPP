@@ -106,9 +106,16 @@ def build(key):
             "./src/linker/parseElf.c",
             "./src/linker/static_link.c",
             "-o", EXE_BIN_LINKER
-        ]
+        ],
+        "mesi" : [
+                "/usr/bin/gcc",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
+                "-I", "./src",
+              #  "-DDEBUG",
+                "./src/hardware/cpu/mesi.c",
+                "-o", "./bin/mesi"
+        ],
     }
-
     if not key in gcc_map:
         print("input the correct build key:", gcc_map.keys())
         exit()
@@ -118,7 +125,8 @@ def run(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
         KEY_MACHINE : EXE_BIN_MACHINE,
-        KEY_LINKER : EXE_BIN_LINKER
+        KEY_LINKER : EXE_BIN_LINKER,
+        "mesi" : "./bin/mesi"
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
@@ -152,29 +160,39 @@ def mem_check(key):
         bin_map[key]
     ])
 
+def cache_verify():
+    subprocess.run([
+        "/usr/bin/python3",
+        "./src/hardware/cpu/cache_verify.py",
+        "/mnt/e/Ubuntu/cache/csim-ref",
+        "/mnt/e/Ubuntu/cache/traces/"
+    ])
+
 # main
 assert(len(sys.argv) >= 2)
-argv_1_lower = sys.argv[1].lower()
+operation = sys.argv[1].lower()
 
-if "build".startswith(argv_1_lower):
+if operation == "build":
     assert(len(sys.argv) == 3)
     build(sys.argv[2])
-elif "run".startswith(argv_1_lower):
+elif operation == "run":
     assert(len(sys.argv) == 3)
     run(sys.argv[2])
-elif "debug".startswith(argv_1_lower):
+elif operation == "debug":
     assert(len(sys.argv) == 3)
     debug(sys.argv[2])
-elif KEY_MACHINE.lower().startswith(argv_1_lower):
+elif operation.lower() == KEY_MACHINE.lower():
     build(KEY_MACHINE)
     run(KEY_MACHINE)
-elif KEY_LINKER.lower().startswith(argv_1_lower):
+elif operation.lower() == KEY_LINKER.lower():
     build(KEY_LINKER)
     run(KEY_LINKER)
-elif "memorycheck".startswith(argv_1_lower):
+elif operation == "memorycheck":
     assert(len(sys.argv) == 3)
     mem_check(sys.argv[2])
-elif "count".startswith(argv_1_lower):
+elif operation == "count":
     count_lines()
-elif "clean".startswith(argv_1_lower):
+elif operation == "clean":
     pass
+elif operation == "csim":
+    cache_verify()
