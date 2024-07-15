@@ -115,6 +115,14 @@ def build(key):
                 "./src/hardware/cpu/mesi.c",
                 "-o", "./bin/mesi"
         ],
+        "malloc" : [
+                "/usr/bin/gcc",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                "-I", "./src",
+                "-DDEBUG_MALLOC",
+                "./src/test/mem_alloc.c",
+                "-o", "./bin/malloc"
+        ],
     }
     if not key in gcc_map:
         print("input the correct build key:", gcc_map.keys())
@@ -126,7 +134,8 @@ def run(key):
     bin_map = {
         KEY_MACHINE : EXE_BIN_MACHINE,
         KEY_LINKER : EXE_BIN_LINKER,
-        "mesi" : "./bin/mesi"
+        "mesi" : "./bin/mesi",
+        "malloc" : "./bin/malloc"
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
