@@ -11,10 +11,37 @@ int heap_init();
 uint64_t mem_alloc(uint32_t size);
 void mem_free(uint64_t vaddr);
 
+static void check_heap_correctness();
+
+static int implicit_free_list_heap_init();
+static uint64_t implicit_list_mem_alloc(uint32_t size);
+static uint64_t implicit_free_list_mem_alloc(uint32_t size);
+static void implicit_free_list_mem_free(uint64_t payload_vaddr);
+
+static int explicit_free_list_heap_init();
+static uint64_t explicit_free_list_mem_alloc(uint32_t size);
+static void explicit_free_list_mem_free(uint64_t payload_vaddr);
+
+static int binary_tree_heap_init();
+static uint64_t binary_tree_mem_alloc(uint32_t size);
+static void binary_tree_mem_free(uint64_t payload_vaddr);
+
+// to allocate one physical page for heap
+static uint32_t extend_heap(uint32_t size);
+
+
+
+
+void os_syscall_brk()
+{
+    // an empty function
+}
+
 uint64_t heap_start_vaddr = 4;  // for unit test convenience
 uint64_t heap_end_vaddr = 4096 - 1;
 
 #define HEAP_MAX_SIZE (4096 * 8)
+#define MIN_IMPLICIT_FREE_LIST_BLOCKSIZE (8)
 uint8_t heap[HEAP_MAX_SIZE];
 
 static uint64_t round_up(uint64_t x, uint64_t n);
@@ -25,13 +52,23 @@ static void set_block_size(uint64_t header_vaddr, uint32_t block_size);
 static uint32_t get_allocated(uint64_t header_vaddr);
 static void set_allocated(uint64_t header_vaddr, uint32_t allocated);
 
+static int is_first_block(uint64_t vaddr);
 static int is_last_block(uint64_t vaddr);
 
 static uint64_t get_payload_addr(uint64_t vaddr);
 static uint64_t get_header_addr(uint64_t vaddr);
+static uint64_t get_tail_addr(uint64_t vaddr);
 
 static uint64_t get_next_header(uint64_t vaddr);
 static uint64_t get_prev_header(uint64_t vaddr);
+
+
+static uint64_t get_prologue();
+static uint64_t get_epilogue();
+
+static uint64_t get_first_block();
+static uint64_t get_last_block();
+static uint32_t extend_heap(uint32_t size);
 
 // Round up to next multiple of n:
 // if (x == k * n)
@@ -48,21 +85,130 @@ static uint64_t get_payload_addr(uint64_t vaddr){
     return round_up(vaddr, 8);
 }
 
+static uint64_t get_prologue(){
 
-static int is_last_block(uint64_t vaddr){
+    assert(heap_end_vaddr > heap_start_vaddr);
+    assert((heap_end_vaddr - heap_start_vaddr) % 4096 == 0);
+    assert(heap_start_vaddr % 4096 == 0);
 
-    assert(heap_start_vaddr <= vaddr && vaddr <= heap_end_vaddr);
+    return heap_start_vaddr + 4;
+}
+
+static uint64_t get_epilogue(){
+
+    assert(heap_end_vaddr > heap_start_vaddr);
+    assert((heap_end_vaddr - heap_start_vaddr) % 4096 == 0);
+    assert(heap_start_vaddr % 4096 == 0);
+
+    return heap_end_vaddr - 4;
+}
+
+static uint32_t extend_heap(uint32_t size){
+
+    size = round_up((uint64_t) size, 4096);
+
+    if (heap_end_vaddr - heap_start_vaddr + size <= HEAP_MAX_SIZE) {
+
+        os_syscall_brk();
+
+        heap_end_vaddr += size;
+
+    } else {
+        return 0;
+    }
+
+    uint64_t epilogue = get_epilogue();
+
+    set_allocated(epilogue, 1);
+    set_block_size(epilogue, size);
+
+    return size;
+}
+
+static uint64_t get_first_block(){
+
+    assert(heap_end_vaddr > heap_start_vaddr);
+    assert((heap_end_vaddr - heap_start_vaddr) % 4096 == 0);
+    assert(heap_start_vaddr % 4096 == 0);
+
+    return get_prologue() + 8;
+}
+
+
+static uint64_t get_last_block(){
+
+    assert(heap_end_vaddr > heap_start_vaddr);
+    assert((heap_end_vaddr - heap_start_vaddr) % 4096 == 0);
+    assert(heap_start_vaddr % 4096 == 0);
+
+    uint64_t last_block_tail = get_epilogue() - 4;
+    uint32_t last_block_size = get_block_size(last_block_tail);
+
+    uint64_t last_block_header = last_block_tail - last_block_size;
+
+    assert(get_first_block() <= last_block_header);
+    return last_block_header;
+}
+
+
+static int is_first_block(uint64_t vaddr){
+
+    if (vaddr == 0) {
+        return 0;
+    }
+
+    assert(get_first_block() <= vaddr && vaddr < get_epilogue());
     assert((vaddr & 0x3) == 0);
 
 
     uint64_t header_value = get_header_addr(vaddr);
-    uint32_t block_size = get_block_size(header_value);
 
-    if (header_value + block_size == heap_end_vaddr + 1 + 4) {
+    if (header_value == get_first_block()) {
+        return 1;
+    }
+    return 0;
+
+}
+
+static int is_last_block(uint64_t vaddr){
+
+    if (vaddr == 0) {
+        return 0;
+    }
+
+    assert(get_prologue() <= vaddr && vaddr < get_epilogue());
+    assert((vaddr & 0x3) == 0);
+
+
+    uint64_t header_value = get_header_addr(vaddr);
+
+    if (header_value == get_last_block()) {
         return 1;
     }
     return 0;
 }
+
+
+static uint64_t get_tail_addr(uint64_t vaddr){
+
+    if (vaddr == 0)
+    {
+        return 0;
+    }
+    assert(get_first_block() <= vaddr && vaddr < get_epilogue());
+    assert((vaddr & 0x3) == 0);
+
+    uint64_t header_addr = get_header_addr(vaddr);
+    uint32_t block_size = get_block_size(header_addr);
+    uint64_t tail_addr = header_addr + block_size - 4;
+
+    assert(get_first_block() <= tail_addr && tail_addr < get_epilogue());
+
+    return tail_addr;
+}
+
+
+
 
 
 static int check_block(uint64_t header_vaddr)
@@ -122,10 +268,10 @@ static uint64_t get_header_addr(uint64_t vaddr){
 
 static uint32_t get_block_size(uint64_t header_value){
 
-    #ifdef DEBUG_MALLOC
-    #endif
+    if (header_value == 0)
+        return 0;
 
-    assert(heap_start_vaddr <= header_value && header_value <= heap_end_vaddr);
+    assert(get_prologue() <= header_value && header_value <= get_epilogue());
     assert((header_value & 0x3) ==  0x0);
 
     uint32_t block_size = *(uint32_t *) &heap[header_value];
@@ -135,7 +281,11 @@ static uint32_t get_block_size(uint64_t header_value){
 
 static void set_block_size(uint64_t header_value, uint32_t block_size){
 
-    assert(heap_start_vaddr <= header_value && header_value <= heap_end_vaddr);
+    if (header_value == 0)
+        return;
+
+
+    assert(get_prologue() <= header_value && header_value <= get_epilogue());
     assert((header_value & 0x3) == 0);
     assert((block_size & 0x7) == 0);
 
@@ -147,7 +297,11 @@ static void set_block_size(uint64_t header_value, uint32_t block_size){
 
 static void set_allocated(uint64_t header_value, uint32_t allocated){
 
-    assert(heap_start_vaddr <= header_value && header_value <= heap_end_vaddr);
+    if (header_value == 0) {
+        return;
+    }
+
+    assert(get_prologue() <= header_value && header_value <= get_epilogue());
     assert((header_value & 0x3) == 0);
 
     *(uint32_t *) &heap[header_value] &= 0xFFFFFFF8;
@@ -157,6 +311,10 @@ static void set_allocated(uint64_t header_value, uint32_t allocated){
 
 
 static uint32_t get_allocated(uint64_t header_value){
+
+    if (header_value == 0) {
+        return 0;
+    }
 
     assert(heap_start_vaddr <=  header_value && header_value <= heap_end_vaddr);
     assert((header_value & 0x3) == 0);
@@ -168,86 +326,254 @@ static uint32_t get_allocated(uint64_t header_value){
 
 static uint64_t get_next_header(uint64_t vaddr) {
 
+    if (vaddr == 0 || is_last_block(vaddr)) {
+        return 0;
+    }
+
+    assert(get_first_block()<= vaddr && vaddr <get_last_block());
+
     uint64_t head_value = get_header_addr(vaddr);
 
     uint32_t block_size = get_block_size(head_value);
 
     uint64_t next_header_value = head_value + block_size;
 
-    assert(heap_start_vaddr <= next_header_value && next_header_value <= heap_end_vaddr);
+    assert(get_first_block()< next_header_value && next_header_value <= get_last_block());
 
     return next_header_value;
 
 }
 
+static uint64_t get_prev_header(uint64_t vaddr){
 
-int heap_init()
-{
-
-    heap_start_vaddr = 4;
-
-    set_block_size(heap_start_vaddr, 4096 - 8);
-    set_allocated(heap_start_vaddr, 0);
-
-    // we do not set footer for the last block in heap
-    heap_end_vaddr = 4096 - 1;
-
-    return 0;
-}
-
-static uint64_t get_prev_header(uint64_t vaddr) {
-
-    uint64_t header_value = get_header_addr(vaddr);
-    assert(header_value >= 16);
-
-    uint64_t prev_tail_value = header_value - 4;
-
-    uint32_t block_size = get_block_size(prev_tail_value);
-
-    uint64_t prev_header_value = header_value - block_size;
-
-    assert(heap_start_vaddr <= prev_header_value && prev_header_value <= heap_end_vaddr - 12);
-
-    return prev_header_value;
-
-}
-
-uint64_t mem_alloc(uint32_t size){
-
-    uint64_t b = heap_start_vaddr;
-
-    uint64_t req_block_size = round_up(size, 8) + 4 + 4;
-
-    while (b <=  heap_end_vaddr) {
-
-        uint32_t block_size = get_block_size(b);
-
-        uint32_t allocated = get_allocated(b);
-
-        if (allocated == 0) {
-
-            if (block_size >= req_block_size) {
-
-                set_allocated(b, 1);
-                set_block_size(b, req_block_size);
-
-                uint64_t next_header_value = b + req_block_size;
-                set_allocated(next_header_value, 0);
-                set_block_size(next_header_value, block_size - req_block_size);
-                return get_payload_addr(b);
-
-            } else {
-                set_allocated(b, 1);
-                return get_payload_addr(b);
-            }
-
-        } else {
-            b = get_next_header(b);
-        }
-
+    if (vaddr == 0 || is_first_block(vaddr)) {
+        return 0;
     }
 
+    assert(get_first_block()< vaddr && vaddr <= get_last_block());
+
+    uint64_t head_value = get_header_addr(vaddr);
+
+    uint64_t prev_tail_value = head_value - 4;
+
+    uint32_t prev_block_size = get_block_size(prev_tail_value);
+
+    uint64_t prev_header_value = prev_tail_value - prev_block_size;
+
+    assert(get_first_block()<= prev_header_value && prev_header_value  < get_last_block());
+    assert(*(uint32_t *)&heap[prev_header_value]== (*(uint32_t *)&heap[prev_tail_value]));
+    return prev_header_value;
+}
+
+
+static int implicit_list_heap_init(){
+
+    // heap clear
+    for (int i = 0; i < HEAP_MAX_SIZE / 8; ++i) {
+        *(uint64_t *) &heap[i] = 0;
+    }
+
+    heap_start_vaddr = 0;
+    heap_end_vaddr = 4096;
+
+    // prologue
+    uint64_t prologue_header = get_prologue();
+    set_allocated(prologue_header, 1);
+    set_block_size(prologue_header, 8);
+
+    uint64_t prologue_tail = prologue_header + 4;
+    set_allocated(prologue_tail, 1);
+    set_block_size(prologue_tail, 8);
+
+    //epilogue
+    uint64_t epilogue_header = get_epilogue();
+    set_allocated(epilogue_header, 1);
+    set_block_size(epilogue_header, 4);
+
+    // block header
+    uint64_t first_block_header = get_first_block();
+    set_allocated(first_block_header, 0);
+    set_block_size(first_block_header, heap_end_vaddr - 8 - 4 - 4);
+
+    // block tail
+    uint64_t first_block_tail = get_tail_addr(first_block_header);
+    set_allocated(first_block_tail, 0);
+    set_block_size(first_block_tail, heap_end_vaddr - 8 - 4 - 4);
+
+    return 1;
+}
+
+int heap_init(){
+
+    #ifdef IMPLICIT_FREE_LIST
+    return implicit_free_list_heap_init();
+    #endif
+
+    #ifdef EXPLICIT_FREE_LIST
+    return explicit_free_list_heap_init();
+    #endif
+
+    #ifdef FREE_BINARY_TREE
+    return binary_tree_heap_init();
+    #endif
+}
+
+
+static void check_heap_correctness(){
+
+    uint64_t first_block = get_first_block();
+    uint64_t last_block = get_last_block();
+    int free_count = 0;
+    uint64_t block = first_block;
+    while (block != 0 && block < last_block) {
+
+        assert(block % 8 == 4);
+        assert(first_block <= block && block <= last_block);
+        assert(*(uint32_t*)&heap[block] ==*(uint32_t*)&*(uint32_t*)&heap[get_tail_addr(block)]);
+
+        uint32_t allocated = get_allocated(block);
+
+        if (allocated == 1) {
+            free_count++;
+        } else {
+            free_count = 0;
+        }
+        assert(free_count <= 1);
+        block = get_next_header(block);
+    }
+}
+
+
+uint64_t try_alloc_with_splitting(uint64_t addr, uint32_t req_block_size) {
+
+    uint64_t allocated = get_allocated(addr);
+    uint64_t block_size = get_block_size(addr);
+
+    if (allocated == 0) {
+
+        if (block_size - req_block_size >= MIN_IMPLICIT_FREE_LIST_BLOCKSIZE) {
+
+            uint64_t next_header_addr = get_next_header(addr);
+            set_block_size(next_header_addr, block_size - req_block_size);
+            set_allocated(next_header_addr, 0);
+
+            uint64_t next_tail_addr = get_tail_addr(next_header_addr);
+            set_block_size(next_tail_addr, block_size - req_block_size);
+            set_allocated(next_tail_addr, 0);
+
+            set_block_size(addr, req_block_size);
+            set_allocated(addr, 1);
+
+            uint64_t tail_addr = get_tail_addr(addr);
+            set_block_size(tail_addr, req_block_size);
+            set_allocated(tail_addr, 1);
+
+            return get_payload_addr(addr);
+        }else{
+
+            set_block_size(addr, block_size);
+            set_allocated(addr, 1);
+            return get_payload_addr(addr);
+        }
+    }
     return 0;
+}
+
+
+static uint64_t try_extend_heap_to_alloc(uint64_t block_size){
+
+    uint64_t last_block_addr = get_last_block();
+    uint64_t last_block_size = get_block_size(last_block_addr);
+    uint64_t last_allocated = get_allocated(last_block_addr);
+
+    uint32_t OS_size = block_size;
+
+    if (last_allocated == 0) {
+        OS_size -= last_block_size;
+    }
+    uint64_t old_epilogue_addr = get_epilogue();
+    uint32_t OS_allocated_size = extend_heap(OS_size);
+
+    uint64_t header_addr = 0;
+
+    if (OS_allocated_size != 0) {
+
+        if (last_allocated == 1) {
+
+            set_allocated(old_epilogue_addr, 0);
+            set_block_size(old_epilogue_addr, OS_allocated_size);
+
+            uint64_t tail_addr = get_tail_addr(old_epilogue_addr);
+            set_allocated(tail_addr, 0);
+            set_block_size(tail_addr, OS_allocated_size);
+
+            header_addr = old_epilogue_addr;
+
+        } else if (last_allocated == 0) {
+
+            set_block_size(last_block_addr, OS_allocated_size + last_block_size);
+            set_allocated(last_block_addr, 0);
+
+
+            uint64_t tail_addr = get_tail_addr(old_epilogue_addr);
+            set_allocated(tail_addr, 0);
+            set_block_size(tail_addr, OS_allocated_size);
+
+            header_addr = last_block_addr;
+        }
+    }
+
+    uint64_t payload_vaddr = try_alloc_with_splitting(header_addr, block_size);
+
+    if (header_addr != 0)
+    {
+        #ifdef DEBUG_MALLOC
+        check_heap_correctness();
+        #endif
+        return payload_vaddr;
+    }
+}
+
+static uint64_t implicit_list_mem_alloc(uint32_t size){
+
+    assert(size > 0 && size <= HEAP_MAX_SIZE - 4 - 8 - 4);
+    uint64_t block_size = round_up(size, 8) + 8;
+    uint64_t addr = get_first_block();
+
+    while (addr != 0 && addr < get_epilogue()) {
+
+        uint64_t payload_addr = try_alloc_with_splitting(addr, block_size);
+
+        if (payload_addr != 0) {
+
+        #ifdef DEBUG_MALLOC
+            check_heap_correctness();
+        #endif
+
+            return payload_addr;
+        }else{
+            addr = get_next_header(addr);
+        }
+    }
+    return try_extend_heap_to_alloc(block_size);
+}
+
+
+
+
+
+uint64_t mem_alloc(uint32_t size){
+    #ifdef IMPLICIT_FREE_LIST
+    return implicit_list_mem_alloc(size);
+    #endif
+
+    #ifdef EXPLICIT_FREE_LIST
+    return explicit_list_mem_alloc(size);
+    #endif
+
+    #ifdef FREE_BINARY_TREE
+    return binary_tree_mem_alloc(size);
+    #endif
 }
 
 
