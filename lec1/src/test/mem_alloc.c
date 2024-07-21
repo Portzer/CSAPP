@@ -487,7 +487,6 @@ static uint64_t try_extend_heap_to_alloc(uint64_t block_size){
     uint64_t last_allocated = get_allocated(last_block_addr);
 
     uint32_t OS_size = block_size;
-
     if (last_allocated == 0) {
         OS_size -= last_block_size;
     }
@@ -558,6 +557,73 @@ static uint64_t implicit_list_mem_alloc(uint32_t size){
     return try_extend_heap_to_alloc(block_size);
 }
 
+static uint64_t merge_blocks_as_free(uint64_t low, uint64_t high){
+
+    assert(low < high);
+    assert(low % 8 == 4 && high % 8 == 4);
+    assert(get_first_block() <= low && low <= get_last_block());
+    assert(get_first_block() <= high && high <= get_last_block());
+    assert(get_next_header(low) == high);
+    assert(get_prev_header(high) == low);
+
+    uint32_t block_size = get_block_size(low) + get_block_size(high);
+    set_block_size(low, block_size);
+    set_allocated(low, 0);
+
+    uint64_t tail_addr = get_tail_addr(high);
+    set_block_size(tail_addr, block_size);
+    set_allocated(tail_addr, 0);
+}
+
+static void implicit_free_list_mem_free(uint64_t payload_vaddr){
+
+    if (payload_vaddr == 0) {
+        return;
+    }
+    assert(get_first_block() < payload_vaddr && payload_vaddr < get_epilogue());
+
+    uint64_t header_vaddr = get_header_addr(payload_vaddr);
+    assert(get_allocated(header_vaddr) == 1);
+    uint64_t prev_header_vaddr = get_prev_header(header_vaddr);
+    uint64_t next_header_vaddr = get_next_header(header_vaddr);
+
+    uint32_t prev_block_size = get_block_size(prev_header_vaddr);
+    uint32_t next_block_size = get_block_size(next_header_vaddr);
+
+    uint64_t prev_allocated = get_allocated(prev_header_vaddr);
+    uint64_t next_allocated = get_allocated(next_header_vaddr);
+
+
+    if (prev_allocated == 1 && next_allocated == 1) {
+
+        set_allocated(header_vaddr, 0);
+        uint64_t tail_addr = get_tail_addr(header_vaddr);
+        set_allocated(tail_addr, 0);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+#endif
+    } else if (prev_allocated == 0 && next_allocated == 0) {
+
+        header_vaddr = merge_blocks_as_free(prev_header_vaddr, header_vaddr);
+        merge_blocks_as_free(header_vaddr, next_header_vaddr);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+#endif
+    } else if (prev_allocated == 0 && next_allocated == 1) {
+
+        merge_blocks_as_free(prev_header_vaddr, header_vaddr);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+#endif
+    } else {
+
+        merge_blocks_as_free(header_vaddr, prev_header_vaddr);
+#ifdef DEBUG_MALLOC
+        check_heap_correctness();
+#endif
+    }
+
+}
 
 
 
@@ -576,49 +642,22 @@ uint64_t mem_alloc(uint32_t size){
     #endif
 }
 
+void mem_free(uint64_t payload_vaddr)
+{
+    #ifdef IMPLICIT_FREE_LIST
+    implicit_list_mem_free(payload_vaddr);
+    #endif
 
-void mem_free(uint64_t vaddr) {
+    #ifdef EXPLICIT_FREE_LIST
+    explicit_list_mem_free(payload_vaddr);
+    #endif
 
-    assert(heap_start_vaddr <= vaddr && vaddr <= heap_end_vaddr);
-    assert((vaddr && 0x7) == 0x0);
-
-    uint64_t head_value = get_header_addr(vaddr);
-    uint32_t block_size = get_block_size(head_value);
-    uint32_t allocated = get_allocated(head_value);
-    assert(allocated == 1);
-
-    uint64_t next_header_value = get_next_header(vaddr);
-    uint64_t prev_header_value = get_prev_header(vaddr);
-
-    uint32_t next_allocated = get_allocated(next_header_value);
-    uint32_t prev_allocated = get_allocated(prev_header_value);
-
-    uint32_t next_block_size = get_block_size(next_header_value);
-    uint32_t prev_block_size = get_block_size(prev_header_value);
-
-
-    if (next_allocated == 1 && prev_allocated == 1) {
-
-        set_allocated(head_value, 1);
-        set_block_size(head_value, block_size);
-
-    } else if (next_allocated == 1 && prev_allocated == 0) {
-
-        //A F (F) A -> A F A
-        set_allocated(prev_header_value, 1);
-        set_block_size(prev_header_value, prev_block_size + block_size);
-    } else if (next_allocated == 0 && prev_allocated == 1) {
-
-        //A (F) F A -> A F A
-        set_allocated(head_value, 1);
-        set_block_size(head_value, next_block_size + block_size);
-    } else {
-
-        set_allocated(prev_header_value, 0);
-        set_block_size(prev_header_value, block_size + prev_block_size + next_block_size);
-    }
-
+    #ifdef FREE_BINARY_TREE
+    binary_tree_mem_free(payload_vaddr);
+    #endif
 }
+
+
 
 
 #ifdef DEBUG_MALLOC
