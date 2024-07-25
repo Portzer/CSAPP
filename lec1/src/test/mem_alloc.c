@@ -359,7 +359,7 @@ static uint64_t get_prev_header(uint64_t vaddr){
 
     uint32_t prev_block_size = get_block_size(prev_tail_value);
 
-    uint64_t prev_header_value = prev_tail_value - prev_block_size;
+    uint64_t prev_header_value = head_value - prev_block_size;
 
     assert(get_first_block()<= prev_header_value && prev_header_value  < get_last_block());
     assert(*(uint32_t *)&heap[prev_header_value]== (*(uint32_t *)&heap[prev_tail_value]));
@@ -380,7 +380,7 @@ static int implicit_list_heap_init(){
     // prologue
     uint64_t prologue_header = get_prologue();
     set_allocated(prologue_header, 1);
-    set_block_size(prologue_header, 8);
+    set_block_size(prologue_header,8);
 
     uint64_t prologue_tail = prologue_header + 4;
     set_allocated(prologue_tail, 1);
@@ -389,7 +389,7 @@ static int implicit_list_heap_init(){
     //epilogue
     uint64_t epilogue_header = get_epilogue();
     set_allocated(epilogue_header, 1);
-    set_block_size(epilogue_header, 4);
+    set_block_size(epilogue_header, 0);
 
     // block header
     uint64_t first_block_header = get_first_block();
@@ -407,7 +407,7 @@ static int implicit_list_heap_init(){
 int heap_init(){
 
     #ifdef IMPLICIT_FREE_LIST
-    return implicit_free_list_heap_init();
+    return implicit_list_heap_init();
     #endif
 
     #ifdef EXPLICIT_FREE_LIST
@@ -427,7 +427,7 @@ static void check_heap_correctness(){
     uint64_t last_block = get_last_block();
     int free_count = 0;
     uint64_t block = first_block;
-    while (block != 0 && block < last_block) {
+    while (block != 0 && block <= last_block) {
 
         assert(block % 8 == 4);
         assert(first_block <= block && block <= last_block);
@@ -435,13 +435,14 @@ static void check_heap_correctness(){
 
         uint32_t allocated = get_allocated(block);
 
-        if (allocated == 1) {
+        if (allocated == 0) {
             free_count++;
         } else {
             free_count = 0;
         }
         assert(free_count <= 1);
         block = get_next_header(block);
+
     }
 }
 
@@ -562,6 +563,9 @@ static uint64_t implicit_list_mem_alloc(uint32_t size){
 
 static uint64_t get_block_ptr(uint64_t header_vaddr , uint32_t offset)
 {
+    if (header_vaddr == 0) {
+        return 0;
+    }
     assert(get_first_block() <= header_vaddr && header_vaddr <= get_last_block());
     assert(header_vaddr % 8 == 4);
     assert(get_block_size(header_vaddr) >= MIN_IMPLICIT_FREE_LIST_BLOCKSIZE);
@@ -574,6 +578,10 @@ static uint64_t get_block_ptr(uint64_t header_vaddr , uint32_t offset)
 
 static void set_block_ptr(uint64_t header_vaddr, uint64_t block_ptr, uint32_t offset)
 {
+    if (header_vaddr == 0)
+    {
+        return;
+    }
     assert(get_first_block() <= header_vaddr && header_vaddr <= get_last_block());
     assert(header_vaddr % 8 == 4);
     assert(get_block_size(header_vaddr) >= MIN_IMPLICIT_FREE_LIST_BLOCKSIZE);
@@ -608,7 +616,6 @@ static void set_free_prev(uint64_t header_vaddr, uint64_t prev_vaddr)
 
 static void set_free_next(uint64_t header_vaddr, uint64_t next_vaddr)
 {
-
     set_block_ptr(header_vaddr, next_vaddr, 8);
 }
 
@@ -624,8 +631,8 @@ static void explicit_list_insert(uint64_t * header_ptr,uint32_t *explicit_counte
 
     if ((*header_ptr) == 0 && (*explicit_counter) == 0) {
 
-        set_free_prev(free_tail, block);
-        set_free_next(block, free_header);
+        set_free_prev(block, block);
+        set_free_next(block, block);
 
         (*explicit_counter)++;
         (*header_ptr) = block;
@@ -633,11 +640,12 @@ static void explicit_list_insert(uint64_t * header_ptr,uint32_t *explicit_counte
         return;
     }
 
-    set_free_next(free_tail, block);
-    set_free_prev(block, free_tail);
+    set_free_prev(free_tail,block);
+    set_free_next(block,free_header);
 
-    set_free_next(free_header, block);
-    set_free_next(block, free_header);
+    set_free_prev(block,free_tail);
+    set_free_next(free_header,block);
+
 
     (*header_ptr) = block;
     (*explicit_counter) += 1;
@@ -924,7 +932,7 @@ uint64_t mem_alloc(uint32_t size){
     #endif
 
     #ifdef EXPLICIT_FREE_LIST
-    return explicit_list_mem_alloc(size);
+    return explicit_free_list_mem_alloc(size);
     #endif
 
     #ifdef FREE_BINARY_TREE

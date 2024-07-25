@@ -120,6 +120,9 @@ def build(key):
                 "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
                 "-I", "./src",
                 "-DDEBUG_MALLOC",
+                #"-DIMPLICIT_FREE_LIST",
+                 "-DEXPLICIT_FREE_LIST",
+                # "-DFREE_BINARY_TREE",
                 "./src/test/mem_alloc.c",
                 "-o", "./bin/malloc"
         ],
