@@ -117,7 +117,7 @@ def build(key):
         ],
         "malloc" : [
                 "/usr/bin/gcc",
-                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable","-finstrument-functions", "-Wno-unused-variable", "-Wno-unused-function",
                 "-I", "./src",
                 "-DDEBUG_MALLOC",
                 "-DIMPLICIT_FREE_LIST",

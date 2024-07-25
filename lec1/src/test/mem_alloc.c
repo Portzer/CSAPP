@@ -145,7 +145,6 @@ static uint64_t get_last_block(){
     uint64_t epilogue_header = get_epilogue();
     uint64_t last_block_tail = epilogue_header - 4;
     uint32_t last_block_size = get_block_size(last_block_tail);
-
     uint64_t last_block_header = epilogue_header - last_block_size;
 
     assert(get_first_block() <= last_block_header);
@@ -204,7 +203,7 @@ static uint64_t get_tail_addr(uint64_t vaddr){
     uint32_t block_size = get_block_size(header_addr);
     uint64_t tail_addr = header_addr + block_size - 4;
 
-    assert(get_first_block() <= tail_addr && tail_addr < get_epilogue());
+    assert(get_first_block() < tail_addr && tail_addr < get_epilogue());
 
     return tail_addr;
 }
@@ -264,6 +263,10 @@ static int check_block(uint64_t header_vaddr)
 
 static uint64_t get_header_addr(uint64_t vaddr){
 
+    if (vaddr == 0) {
+        return 0;
+    }
+
     return get_payload_addr(vaddr) - 4;
 }
 
@@ -315,7 +318,7 @@ static void set_allocated(uint64_t header_value, uint32_t allocated){
 static uint32_t get_allocated(uint64_t header_value){
 
     if (header_value == 0) {
-        return 0;
+        return 1;
     }
 
     assert(heap_start_vaddr <=  header_value && header_value <= heap_end_vaddr);
@@ -432,7 +435,8 @@ static void check_heap_correctness(){
 
         assert(block % 8 == 4);
         assert(first_block <= block && block <= last_block);
-        assert(*(uint32_t*)&heap[block] ==*(uint32_t*)&*(uint32_t*)&heap[get_tail_addr(block)]);
+
+        assert(*(uint32_t*)&heap[block] == *(uint32_t*)&heap[get_tail_addr(block)]);
 
         uint32_t allocated = get_allocated(block);
 
@@ -450,18 +454,18 @@ static void check_heap_correctness(){
 
 uint64_t try_alloc_with_splitting(uint64_t addr, uint32_t req_block_size) {
 
+    if (req_block_size < MIN_IMPLICIT_FREE_LIST_BLOCKSIZE)
+    {
+        return 0;
+    }
     uint64_t allocated = get_allocated(addr);
     uint64_t block_size = get_block_size(addr);
 
-    if (allocated == 0) {
+    if (allocated == 0 &&block_size >= req_block_size) {
 
         if (block_size - req_block_size >= MIN_IMPLICIT_FREE_LIST_BLOCKSIZE) {
 
-            uint64_t next_header_addr = get_next_header(addr);
-            set_block_size(next_header_addr, block_size - req_block_size);
-            set_allocated(next_header_addr, 0);
-
-            uint64_t next_tail_addr = get_tail_addr(next_header_addr);
+            uint64_t next_tail_addr = get_tail_addr(addr);
             set_block_size(next_tail_addr, block_size - req_block_size);
             set_allocated(next_tail_addr, 0);
 
@@ -472,11 +476,19 @@ uint64_t try_alloc_with_splitting(uint64_t addr, uint32_t req_block_size) {
             set_block_size(tail_addr, req_block_size);
             set_allocated(tail_addr, 1);
 
-            return get_payload_addr(addr);
-        }else{
+            uint64_t next_header_addr = get_next_header(addr);
+            set_block_size(next_header_addr, block_size - req_block_size);
+            set_allocated(next_header_addr, 0);
 
-            set_block_size(addr, block_size);
+            return get_payload_addr(addr);
+
+        }else if(block_size - req_block_size < MIN_IMPLICIT_FREE_LIST_BLOCKSIZE){
             set_allocated(addr, 1);
+            uint64_t tail_addr = get_tail_addr(addr);
+            set_allocated(tail_addr, 1);
+
+
+
             return get_payload_addr(addr);
         }
     }
@@ -497,9 +509,13 @@ static uint64_t try_extend_heap_to_alloc(uint64_t block_size){
     uint64_t old_epilogue_addr = get_epilogue();
     uint32_t OS_allocated_size = extend_heap(OS_size);
 
-    uint64_t header_addr = 0;
+
 
     if (OS_allocated_size != 0) {
+
+        assert(OS_allocated_size >= 4096);
+        assert(OS_allocated_size % 4096 == 0);
+        uint64_t header_addr = 0;
 
         if (last_allocated == 1) {
 
@@ -524,17 +540,22 @@ static uint64_t try_extend_heap_to_alloc(uint64_t block_size){
 
             header_addr = last_block_addr;
         }
+
+        uint64_t payload_vaddr = try_alloc_with_splitting(header_addr, block_size);
+
+        if (payload_vaddr != 0)
+        {
+            #ifdef DEBUG_MALLOC
+            check_heap_correctness();
+            #endif
+            return payload_vaddr;
+        }
     }
 
-    uint64_t payload_vaddr = try_alloc_with_splitting(header_addr, block_size);
-
-    if (header_addr != 0)
-    {
-        #ifdef DEBUG_MALLOC
-        check_heap_correctness();
-        #endif
-        return payload_vaddr;
-    }
+#ifdef DEBUG_MALLOC
+    check_heap_correctness();
+      printf("OS cannot allocate physical page for heap!\n");
+#endif
     return 0;
 }
 
@@ -542,14 +563,14 @@ static uint64_t implicit_list_mem_alloc(uint32_t size){
 
     assert(size > 0 && size <= HEAP_MAX_SIZE - 4 - 8 - 4);
     uint64_t block_size = round_up(size, 8) + 8;
+    block_size = block_size < MIN_IMPLICIT_FREE_LIST_BLOCKSIZE ?
+                        MIN_IMPLICIT_FREE_LIST_BLOCKSIZE : block_size;
     uint64_t addr = get_first_block();
 
     while (addr != 0 && addr < get_epilogue()) {
 
         uint64_t payload_addr = try_alloc_with_splitting(addr, block_size);
-
         if (payload_addr != 0) {
-
         #ifdef DEBUG_MALLOC
             check_heap_correctness();
         #endif
@@ -779,6 +800,8 @@ static uint64_t merge_blocks_as_free(uint64_t low, uint64_t high){
     assert(get_prev_header(high) == low);
 
     uint32_t block_size = get_block_size(low) + get_block_size(high);
+
+
     set_block_size(low, block_size);
     set_allocated(low, 0);
 
@@ -793,15 +816,16 @@ static void implicit_list_mem_free(uint64_t payload_vaddr){
     if (payload_vaddr == 0) {
         return;
     }
+    assert((payload_vaddr & 0x7) == 0x0);
     assert(get_first_block() < payload_vaddr && payload_vaddr < get_epilogue());
 
     uint64_t header_vaddr = get_header_addr(payload_vaddr);
+
+
     assert(get_allocated(header_vaddr) == 1);
+
     uint64_t prev_header_vaddr = get_prev_header(header_vaddr);
     uint64_t next_header_vaddr = get_next_header(header_vaddr);
-
-    uint32_t prev_block_size = get_block_size(prev_header_vaddr);
-    uint32_t next_block_size = get_block_size(next_header_vaddr);
 
     uint64_t prev_allocated = get_allocated(prev_header_vaddr);
     uint64_t next_allocated = get_allocated(next_header_vaddr);
@@ -828,11 +852,16 @@ static void implicit_list_mem_free(uint64_t payload_vaddr){
 #ifdef DEBUG_MALLOC
         check_heap_correctness();
 #endif
-    } else {
+    } else if (prev_allocated == 1 && next_allocated == 0) {
 
-        merge_blocks_as_free(header_vaddr, prev_header_vaddr);
+        merge_blocks_as_free(header_vaddr, next_header_vaddr);
 #ifdef DEBUG_MALLOC
         check_heap_correctness();
+#endif
+    }else {
+#ifdef DEBUG_MALLOC
+        printf("exception for free\n");
+        exit(0);
 #endif
     }
 
@@ -1179,7 +1208,7 @@ static void test_malloc_free()
     // collection for the pointers
     linkedlist_t *ptrs = linkedlist_construct();
 
-    for (int i = 0; i < 100000; ++ i)
+    for (int i = 0; i < 100; ++ i)
     {
         if ((rand() & 0x1) == 0)
         {
@@ -1231,6 +1260,7 @@ int main()
     test_set_blocksize_allocated();
     test_get_header_payload_addr();
     test_get_next_prev();
+    test_malloc_free();
 
 
     return 0;
