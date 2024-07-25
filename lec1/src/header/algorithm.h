@@ -25,10 +25,11 @@ typedef struct
 
 linkedlist_t *linkedlist_construct();
 void linkedlist_free(linkedlist_t *list);
-int linkedlist_add(linkedlist_t **address, uint64_t value);
+linkedlist_t *linkedlist_add(linkedlist_t *list, uint64_t value);
 int linkedlist_delete(linkedlist_t *list, linkedlist_node_t *node);
 linkedlist_node_t *linkedlist_get(linkedlist_t *list, uint64_t value);
 linkedlist_node_t *linkedlist_next(linkedlist_t *list);
+linkedlist_node_t *linkedlist_index(linkedlist_t *list, uint64_t index);
 
 /*======================================*/
 /*      Dynamic Array                   */

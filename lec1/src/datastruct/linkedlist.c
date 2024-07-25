@@ -46,12 +46,11 @@ void linkedlist_free(linkedlist_t *list)
     free(list);
 }
 
-int linkedlist_add(linkedlist_t **address, uint64_t value)
+linkedlist_t *linkedlist_add(linkedlist_t *list, uint64_t value)
 {
-    linkedlist_t *list = *address;
     if (list == NULL)
     {
-        return 0;
+        return NULL;
     }
 
     if (list->count == 0)
@@ -75,12 +74,12 @@ int linkedlist_add(linkedlist_t **address, uint64_t value)
         node->prev->next = node;
         list->count ++;
     }
-    return 1;
+    return list;
 }
 
 int linkedlist_delete(linkedlist_t *list, linkedlist_node_t *node)
 {
-    if (list == NULL)
+    if (list == NULL || list->count == 0)
     {
         return 0;
     }
@@ -89,6 +88,13 @@ int linkedlist_delete(linkedlist_t *list, linkedlist_node_t *node)
     // same for the only one node situation
     node->prev->next = node->next;
     node->next->prev = node->prev;
+
+    // if this node to be free is the head
+    if (node == list->head)
+    {
+        list->head = node->next;
+    }
+
     // free the node managed by the list
     free(node);
     // reset the linked list status
@@ -118,6 +124,21 @@ linkedlist_node_t *linkedlist_get(linkedlist_t *list, uint64_t value)
         p = p->next;
     }
     return NULL;
+}
+
+linkedlist_node_t *linkedlist_index(linkedlist_t *list, uint64_t index)
+{
+    if (list == NULL || index >= list->count)
+    {
+        return NULL;
+    }
+
+    linkedlist_node_t *p = list->head;
+    for (int i = 0; i <= index; ++ i)
+    {
+        p = p->next;
+    }
+    return p;
 }
 
 // traverse the linked list

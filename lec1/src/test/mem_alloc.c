@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include "../header/algorithm.h"
 
 int heap_init();
 uint64_t mem_alloc(uint32_t size);
@@ -1161,6 +1162,62 @@ static void test_get_next_prev()
         h = get_prev_header(h);
         i -= 1;
     }
+
+    printf("\033[32;1m\tPass\033[0m\n");
+}
+
+
+static void test_malloc_free()
+{
+    printf("Testing implicit list malloc & free ...\n");
+
+    heap_init();
+    check_heap_correctness();
+
+    srand(123456);
+
+    // collection for the pointers
+    linkedlist_t *ptrs = linkedlist_construct();
+
+    for (int i = 0; i < 100000; ++ i)
+    {
+        if ((rand() & 0x1) == 0)
+        {
+            // malloc
+            uint32_t size = rand() % 1024 + 1;  // a non zero value
+
+            uint64_t p = mem_alloc(size);
+
+            if (p != 0)
+            {
+                ptrs = linkedlist_add(ptrs, p);
+            }
+        }
+        else if (ptrs->count != 0)
+        {
+            // free
+            // randomly select one to free
+            int random_index = rand() % ptrs->count;
+            linkedlist_node_t *t = linkedlist_index(ptrs, random_index);
+            mem_free(t->value);
+            linkedlist_delete(ptrs, t);
+        }
+    }
+
+    int num_still_allocated = ptrs->count;
+    for (int i = 0; i < num_still_allocated; ++ i)
+    {
+        linkedlist_node_t *t = linkedlist_next(ptrs);
+        mem_free(t->value);
+        int x = linkedlist_delete(ptrs, t);
+    }
+    assert(ptrs->count == 0);
+    linkedlist_free(ptrs);
+
+    // finally there should be only one free block
+    assert(is_last_block(get_first_block()) == 1);
+    assert(get_allocated(get_first_block()) == 0);
+    check_heap_correctness();
 
     printf("\033[32;1m\tPass\033[0m\n");
 }
