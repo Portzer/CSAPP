@@ -123,8 +123,8 @@ def build(key):
                 "-DIMPLICIT_FREE_LIST",
                 # "-DEXPLICIT_FREE_LIST",
                 # "-DFREE_BINARY_TREE",
-                "./src/datastruct/linkedlist.c",
-                "./src/test/mem_alloc.c",
+                "./src/datastruct/linkedlist.c","./src/malloc/implicit_list.c", "./src/malloc/explicit_list.c", "./src/malloc/redblack_tree.c",
+                "./src/malloc/mem_alloc.c",
                 "-o", "./bin/malloc"
         ],
     }
