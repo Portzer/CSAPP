@@ -105,7 +105,6 @@ static int internal_heap_init()
 static uint64_t internal_malloc(uint32_t size)
 {
     assert(0 < size && size < HEAP_MAX_SIZE - 4 - 8 - 4);
-
     uint64_t payload_vaddr = NIL;
     uint32_t request_blocksize = round_up(size, 8) + 4 + 4;
     request_blocksize = request_blocksize < MIN_IMPLICIT_FREE_LIST_BLOCKSIZE ?

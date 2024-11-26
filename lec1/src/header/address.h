@@ -2,18 +2,25 @@
 // Created by M on 2024/6/16.
 //
 
-#ifndef CSAPP_ADDRESS_H
-#define CSAPP_ADDRESS_H
+// include guards to prevent double declaration of any identifiers
+// such as types, enums and static variables
+#ifndef ADDRESS_GUARD
+#define ADDRESS_GUARD
 
 #include <stdint.h>
-#define NUM_CACHE_LINE_PER_SET (8)
-#define SRAM_CACHE_TAG_LENGTH (40)
+
+#ifndef CACHE_SIMULATION_VERIFICATION
+/*  for cache simulator verification
+    use the marcos passed in
+ */
 #define SRAM_CACHE_INDEX_LENGTH (6)
 #define SRAM_CACHE_OFFSET_LENGTH (6)
+#define SRAM_CACHE_TAG_LENGTH (4)
+#endif
 
 #define PHYSICAL_PAGE_OFFSET_LENGTH (12)
-#define PHYSICAL_PAGE_NUMBER_LENGTH (40)
-#define PHYSICAL_ADDRESS_LENGTH (52)
+#define PHYSICAL_PAGE_NUMBER_LENGTH (4)
+#define PHYSICAL_ADDRESS_LENGTH (16)
 
 #define VIRTUAL_PAGE_OFFSET_LENGTH (12)
 #define VIRTUAL_PAGE_NUMBER_LENGTH (9)  // 9 + 9 + 9 + 9 = 36
@@ -22,9 +29,6 @@
 #define TLB_CACHE_OFFSET_LENGTH (12)
 #define TLB_CACHE_INDEX_LENGTH (4)
 #define TLB_CACHE_TAG_LENGTH (32)
-#define NUM_TLB_CACHE_LINE_PER_SET (8)
-
-
 
 /*
 +--------+--------+--------+--------+---------------+
@@ -89,31 +93,4 @@ typedef union
     };
 } address_t;
 
-
-
-
-
-typedef struct
-{
-    int valid;
-    uint64_t tag;
-    uint64_t ppn;
-} tlb_cacheline_t;
-
-typedef struct
-{
-    tlb_cacheline_t lines[NUM_TLB_CACHE_LINE_PER_SET];
-} tlb_cacheset_t;
-
-typedef struct
-{
-    tlb_cacheset_t sets[(1 << TLB_CACHE_INDEX_LENGTH)];
-} tlb_cache_t;
-
-static tlb_cache_t mmu_tlb;
-
-
-
-
-
-#endif //CSAPP_ADDRESS_H
+#endif

@@ -1,14 +1,30 @@
-//
-// Created by M on 2023/12/16.
-//
+/* BCST - Introduction to Computer Systems
+ * Author:      yangminz@outlook.com
+ * Github:      https://github.com/yangminz/bcst_csapp
+ * Bilibili:    https://space.bilibili.com/4564101
+ * Zhihu:       https://www.zhihu.com/people/zhao-yang-min
+ * This project (code repository and videos) is exclusively owned by yangminz
+ * and shall not be used for commercial and profitting purpose
+ * without yangminz's permission.
+ */
 
-#ifndef CSAPP_CPU_H
-#define CSAPP_CPU_H
+// include guards to prevent double declaration of any identifiers
+// such as types, enums and static variables
+#ifndef CPU_GUARD
+#define CPU_GUARD
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "../header/instruction.h"
 
-typedef struct REGISTER_STRUCT
+/*======================================*/
+/*      registers                       */
+/*======================================*/
+
+// struct of registers in each core
+// resource accessible to the core itself only
+
+typedef struct
 {
     // return value
     union
@@ -176,29 +192,68 @@ typedef struct REGISTER_STRUCT
         uint16_t r15w;
         uint8_t  r15b;
     };
-    uint64_t rip;
-} reg_t;
+} cpu_reg_t;
+cpu_reg_t cpu_reg;
 
-reg_t cpu_reg;
+/*======================================*/
+/*      cpu core                        */
+/*======================================*/
 
-typedef struct CPU_FLAGS_STRUCT
+// condition code flags of most recent (latest) operation
+// condition codes will only be set by the following integer arithmetic instructions
+
+/* integer arithmetic instructions
+    inc     increment 1
+    dec     decrement 1
+    neg     negate
+    not     complement
+    ----------------------------
+    add     add
+    sub     subtract
+    imul    multiply
+    xor     exclusive or
+    or      or
+    and     and
+    ----------------------------
+    sal     left shift
+    shl     left shift (same as sal)
+    sar     arithmetic right shift
+    shr     logical right shift
+*/
+
+/* comparison and test instructions
+    cmp     compare
+    test    test
+*/
+
+// the 4 flags be a uint64_t in total
+typedef union
 {
-    union
+    uint64_t __flags_value;
+    struct
     {
-        uint64_t __cpu_flag_value;
-        struct
-        {
-            // carry flag: detect overflow for unsigned operations
-            uint16_t CF;
-            // zero flag: result is zero
-            uint16_t ZF;
-            // sign flag: result is negative: highest bit
-            uint16_t SF;
-            // overflow flag: detect overflow for signed operations
-            uint16_t OF;
-        };
+        // carry flag: detect overflow for unsigned operations
+        uint16_t CF;
+        // zero flag: result is zero
+        uint16_t ZF;
+        // sign flag: result is negative: highest bit
+        uint16_t SF;
+        // overflow flag: detect overflow for signed operations
+        uint16_t OF;
     };
-} cpu_flag_t;
+} cpu_flags_t;
+cpu_flags_t cpu_flags;
+
+// program counter or instruction pointer
+typedef union
+{
+    uint64_t rip;
+    uint32_t eip;
+} cpu_pc_t;
+cpu_pc_t cpu_pc;
+
+// pointing to Task-State Segment (in main memory) of the current process
+uint64_t cpu_task_register;
 
 // control registers
 typedef struct
@@ -207,40 +262,27 @@ typedef struct
     uint64_t cr1;
     uint64_t cr2;
     uint64_t cr3;   // should be a 40-bit PPN for PGD in DRAM
-    // but we are using 48-bit virutal address on simulator's heap
-    // (by malloc())
+                    // but we are using 48-bit virutal address on simulator's heap
+                    // (by malloc())
 } cpu_cr_t;
 cpu_cr_t cpu_controls;
 
-
-
-
-typedef struct CORE_STRUCT
-{
-    // program counter or instruction pointer
-    union
-    {
-        uint64_t rip;
-        uint32_t eip;
-    };
-
-    // condition code flags of most recent (latest) operation
-    // condition codes will only be set by the following integer arithmetic instructions
-    cpu_flag_t flags;
-
-    // register files
-    reg_t       reg;
-} core_t;
-#define NUM_CORES 1
-core_t CORES[NUM_CORES];
-uint64_t ACTIVE_CORE;
-
-#define MAX_INSTRUCTION_CHAR 64
+// move to common.h to be shared by linker
+// #define MAX_INSTRUCTION_CHAR 64
 #define NUM_INSTRTYPE 14
 
-void instruction_cycle(core_t *core);
+// CPU's instruction cycle: execution of instructions
+void instruction_cycle();
 
-uint64_t va2pa(uint64_t va, core_t *core);
+/*--------------------------------------*/
+// place the functions here because they requires the core_t type
 
+/*--------------------------------------*/
+// mmu functions
 
-#endif //CSAPP_CPU_H
+// translate the virtual address to physical address in MMU
+// each MMU is owned by each core
+uint64_t va2pa(uint64_t vaddr);
+
+// end of include guard
+#endif
