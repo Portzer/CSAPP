@@ -77,80 +77,244 @@ def count_lines():
 def build(key):
     make_build_directory()
     gcc_map = {
-        KEY_MACHINE : [
-            "/usr/bin/gcc",
-            "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
-            "-I", "./src",
-            "./src/test/test_machine.c",
-            "./src/common/print.c",
-            "./src/common/convert.c",
-            "./src/common/cleanup.c",
-            "./src/datastruct/trie.c",
-            "./src/datastruct/array.c",
-            "./src/hardware/cpu/isa.c",
-            "./src/hardware/cpu/mmu.c",
-            "./src/hardware/memory/dram.c",
-            "-o", EXE_BIN_MACHINE],
-        KEY_LINKER : [
-            "/usr/bin/gcc",
-            "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
-            "-I", "./src",
-            "./src/test/test_elf.c",
-            "./src/common/print.c",
-            "./src/common/tagmalloc.c",
-            "./src/common/cleanup.c",
-            "./src/datastruct/array.c",
-            "./src/common/convert.c",
-            "./src/datastruct/hashtable.c",
-            "./src/datastruct/linkedlist.c",
-            "./src/linker/parseElf.c",
-            "./src/linker/static_link.c",
-            "-o", EXE_BIN_LINKER
+        "isa" : [
+            [
+                "/usr/bin/gcc",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function", "-Wno-unused-variable",
+                "-I", "./src",
+                "-DDEBUG_INSTRUCTION_CYCLE",
+                "./src/common/convert.c",
+                "./src/common/cleanup.c",
+                "./src/algorithm/hashtable.c",
+                "./src/algorithm/trie.c",
+                "./src/algorithm/array.c",
+                "./src/hardware/cpu/isa.c",
+                "./src/hardware/cpu/mmu.c",
+                "./src/hardware/memory/dram.c",
+                "./src/tests/test_run_isa.c",
+                "-o", "./bin/run_isa"
+            ]
         ],
-        "mesi" : [
+        "int" : [
+            [
+                "/usr/bin/gcc",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                "-I", "./src",
+                "-DDEBUG_INSTRUCTION_CYCLE",
+                # "-DDEBUG_ENABLE_SRAM_CACHE",
+                "-DUSE_NAVIE_VA2PA",
+                "./src/common/convert.c",
+                "./src/common/cleanup.c",
+                "./src/algorithm/hashtable.c",
+                "./src/algorithm/trie.c",
+                "./src/algorithm/array.c",
+                "./src/hardware/cpu/isa.c",
+                "./src/hardware/cpu/mmu.c",
+                "./src/hardware/cpu/inst.c",
+                # "./src/hardware/cpu/sram.c",
+                "./src/hardware/cpu/interrupt.c",
+                "./src/hardware/memory/dram.c",
+                # "./src/hardware/memory/swap.c",
+                "./src/process/syscall.c",
+                "./src/tests/test_run_isa.c",
+                "-o", "./bin/run_isa"
+            ]
+        ],
+        "inst" : [
+            [
+                "/usr/bin/gcc",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function", "-Wno-unused-variable",
+                "-I", "./src",
+                "-DDEBUG_INSTRUCTION_CYCLE",
+                "./src/common/convert.c",
+                "./src/common/cleanup.c",
+                "./src/algorithm/hashtable.c",
+                "./src/algorithm/trie.c",
+                "./src/algorithm/array.c",
+                "./src/hardware/cpu/inst.c",
+                "./src/tests/test_inst.c",
+                "-o", "./bin/test_inst"
+            ],
+        ],
+        "link" : [
+            [
                 "/usr/bin/gcc",
                 "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
                 "-I", "./src",
-              #  "-DDEBUG",
-                "./src/hardware/cpu/mesi.c",
+                "-shared", "-fPIC",
+                "./src/common/convert.c",
+                "./src/common/cleanup.c",
+                "./src/algorithm/array.c",
+                "./src/algorithm/hashtable.c",
+                "./src/algorithm/linkedlist.c",
+                "./src/linker/parseElf.c",
+                "./src/linker/staticlink.c",
+                "-o", "./bin/staticLinker.so"
+            ],
+            [
+                "/usr/bin/gcc",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-function",
+                "-I", "./src",
+                # "-DDEBUG_LINK",
+                "./src/common/convert.c",
+                "./src/common/cleanup.c",
+                "./src/algorithm/array.c",
+                "./src/algorithm/hashtable.c",
+                "./src/algorithm/linkedlist.c",
+                "./src/linker/linker.c",
+                "-ldl", "-o", "./bin/link"
+            ],
+        ],
+        "elf" : [
+            [
+                "/usr/bin/gcc",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99",
+                "-Wno-unused-function",
+                "-Wno-unused-but-set-variable",
+                "-I", "./src",
+                "-DDEBUG_PARSE_ELF",
+                "-DDEBUG_LINK",
+                "./src/common/convert.c",
+                "./src/common/cleanup.c",
+                "./src/algorithm/array.c",
+                "./src/algorithm/hashtable.c",
+                "./src/algorithm/linkedlist.c",
+                "./src/linker/parseElf.c",
+                "-o", "./bin/elf"
+            ],
+        ],
+        "mesi" : [
+            [
+                "/usr/bin/gcc",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable",
+                "-I", "./src",
+                # "-DDEBUG",
+                "./src/mains/mesi.c",
                 "-o", "./bin/mesi"
+            ],
+        ],
+        "false_sharing" : [
+            [
+                "/usr/bin/gcc",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable",
+                "-I", "./src",
+                "-pthread",
+                "./src/mains/false_sharing.c",
+                "-o", "./bin/false_sharing"
+            ],
+        ],
+        "rbt" : [
+            [
+                "/usr/bin/gcc",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                "-I", "./src",
+                "-DDEBUG_REDBLACK",
+                "./src/common/convert.c",
+                "./src/algorithm/bst.c",
+                "./src/algorithm/rbt.c",
+                "./src/tests/test_rbt.c",
+                "-o", "./bin/rbt"
+            ],
+        ],
+        "trie" : [
+            [
+                "/usr/bin/gcc",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                "-I", "./src",
+                "-DDEBUG_TRIE",
+                "./src/algorithm/trie.c", "./src/algorithm/hashtable.c",
+                "./src/tests/test_trie.c",
+                "-o", "./bin/trie"
+            ],
+        ],
+        "bst" : [
+            [
+                "/usr/bin/gcc",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                "-I", "./src",
+                "-DDEBUG_BST",
+                "./src/algorithm/bst.c",
+                "./src/common/convert.c",
+                "./src/tests/test_bst.c",
+                "-o", "./bin/bst"
+            ],
         ],
         "malloc" : [
-                "/usr/bin/gcc",
-                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable","-finstrument-functions", "-Wno-unused-variable", "-Wno-unused-function",
+            [
+                "/usr/bin/",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
                 "-I", "./src",
                 "-DDEBUG_MALLOC",
-                #"-DIMPLICIT_FREE_LIST",
-                 "-DEXPLICIT_FREE_LIST",
-                # "-DFREE_BINARY_TREE",
-                "./src/datastruct/linkedlist.c","./src/malloc/implicit_list.c", "./src/malloc/explicit_list.c", "./src/malloc/redblack_tree.c",
+                # "-DIMPLICIT_FREE_LIST",
+                # "-DEXPLICIT_FREE_LIST",
+                "-DREDBLACK_TREE",
+                "./src/common/convert.c",
+                "./src/algorithm/linkedlist.c",
+                "./src/algorithm/bst.c",
+                "./src/algorithm/rbt.c",
+                "./src/malloc/block.c",
+                "./src/malloc/small_list.c",
+                "./src/malloc/implicit_list.c",
+                "./src/malloc/explicit_list.c",
+                "./src/malloc/segregated_list.c",
+                "./src/malloc/redblack_tree.c",
                 "./src/malloc/mem_alloc.c",
+                "./src/tests/test_malloc.c",
                 "-o", "./bin/malloc"
+            ],
+        ],
+        "convert" : [
+            [
+                "/usr/bin/gcc",
+                "-Wall", "-g", "-O0", "-Werror", "-std=gnu99", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-unused-function",
+                "-I", "./src",
+                "-DDEBUG_BST",
+                "-DDEBUG_STRING2UINT",
+                "./src/common/convert.c",
+                "./src/tests/test_convert.c",
+                "-o", "./bin/convert"
+            ],
         ],
     }
+
     if not key in gcc_map:
         print("input the correct build key:", gcc_map.keys())
         exit()
-    subprocess.run(gcc_map[key])
+    for command in gcc_map[key]:
+        subprocess.run(command)
 
 def run(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
-        KEY_MACHINE : EXE_BIN_MACHINE,
-        KEY_LINKER : EXE_BIN_LINKER,
-        "mesi" : "./bin/mesi",
-        "malloc" : "./bin/malloc"
+        "inst" : ["./bin/test_inst"],
+        "isa" : ["./bin/run_isa"],
+        "int" : ["./bin/run_isa"],
+        "elf" : ["./bin/elf"],
+        "link" : ["./bin/link", "main", "sum", "-o", "output"],
+        "mesi" : ["./bin/mesi"],
+        "false_sharing" : ["./bin/false_sharing"],
+        "rbt" : ["./bin/rbt"],
+        "trie" : ["./bin/trie"],
+        "bst" : ["./bin/bst"],
+        "malloc" : ["./bin/malloc"],
+        "convert" : ["./bin/convert"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
         exit()
-    subprocess.run([bin_map[key]])
+    subprocess.run(bin_map[key])
 
 def debug(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
-        KEY_MACHINE : EXE_BIN_MACHINE,
-        KEY_LINKER : EXE_BIN_LINKER
+        "isa" : [gdb, "./bin/run_isa"],
+        "int" : [gdb, "./bin/run_isa"],
+        "link" : [gdb, "--args", "./bin/link", "main", "sum", "-o", "output"],
+        "malloc" : [gdb, "./bin/malloc"],
+        "bst" : [gdb, "./bin/bst"],
+        "rbt" : [gdb, "./bin/rbt"],
+        "trie" : [gdb, "./bin/trie"],
+        "inst" : [gdb, "./bin/test_inst"],
     }
     if not key in bin_map:
         print("input the correct binary key:", bin_map.keys())
@@ -160,18 +324,16 @@ def debug(key):
 def mem_check(key):
     assert(os.path.isdir("./bin/"))
     bin_map = {
-        KEY_MACHINE : EXE_BIN_MACHINE,
-        KEY_LINKER : EXE_BIN_LINKER
+        "isa" : ["./bin/ut_isa"],
+        "link" : ["./bin/link", "main", "sum", "-o", "output"]
     }
     if not key in bin_map:
         print("input the correct memory check key:", bin_map.keys())
         exit()
     subprocess.run([
-        "/usr/bin/valgrind",
-        "--tool=memcheck",
-        "--leak-check=full",
-        bin_map[key]
-    ])
+                       "/usr/bin/valgrind",
+                       "--tool=memcheck",
+                       "--leak-check=full"] + bin_map[key])
 
 def cache_verify():
     subprocess.run([
@@ -194,13 +356,7 @@ elif operation == "run":
 elif operation == "debug":
     assert(len(sys.argv) == 3)
     debug(sys.argv[2])
-elif operation.lower() == KEY_MACHINE.lower():
-    build(KEY_MACHINE)
-    run(KEY_MACHINE)
-elif operation.lower() == KEY_LINKER.lower():
-    build(KEY_LINKER)
-    run(KEY_LINKER)
-elif operation == "memorycheck":
+elif operation == "memcheck":
     assert(len(sys.argv) == 3)
     mem_check(sys.argv[2])
 elif operation == "count":
